@@ -1,6 +1,13 @@
+import os
+import sys
+from ctypes import windll
+
 from typing import List, Tuple, Union
 
 import pygame
+
+
+SCREENSIZE = windll.user32.GetSystemMetrics(0), windll.user32.GetSystemMetrics(1)
 
 
 def clamp(value: int, mn: int, mx: int):
@@ -87,16 +94,53 @@ class EntityGroup:
         for ins in running: ins.do_alerts()
 
 class Screen:
-    def __init__(self, canvas_size: Tuple[int, int], realscreen_size: Tuple[int, int], fullscreen_mode: bool = False):
+    '''Класс окна. В нем есть холст (на который наносятся нарисованные объекты) и дисплей (то, что показывается).
+       Есть возможность создания полноэкранного режима.
+
+       fullscreen_mode - числовой аргумент от 0 до 2 включительно:
+       | 0 - оконный режим
+       | 1 - полноэкранный режим
+       | 2 - смешанный режим (оконнный на весь экран)'''
+    def __init__(self, canvas_size: Tuple[int, int], realscreen_size: Tuple[int, int], fullscreen_mode: int = 0):
         self.cs = self.csw, self.csh = canvas_size
         self.ss = self.ssw, self.ssh = realscreen_size
         self.canvas = pygame.Surface(self.cs)
-        self.screen = pygame.display.set_mode(self.ss, (bool(fullscreen_mode) * pygame.FULLSCREEN))
+        self.fm = fullscreen_mode
+
+        if self.fm == 1:
+            self.screen = pygame.display.set_mode(self.ss, pygame.FULLSCREEN)
+        elif self.fm == 2:
+            self.screen = pygame.display.set_mode(SCREENSIZE, pygame.NOFRAME)
+        else:
+            self.screen = pygame.display.set_mode(self.ss)
 
     def get_canvas(self):
-        return
+        return self.canvas
+
+    def get_screen(self):
+        return self.screen
 
     def update_screen(self, size: Tuple[int, int] = None, fullscreen_mode: bool = False):
         if size is None:
             size = self.ss
-        self.screen = pygame.display.set_mode(size, (bool(fullscreen_mode) * pygame.FULLSCREEN))
+
+        self.fm = fullscreen_mode
+        if self.fm == 1:
+            self.screen = pygame.display.set_mode(self.ss, pygame.FULLSCREEN)
+        elif self.fm == 2:
+            self.screen = pygame.display.set_mode(SCREENSIZE, pygame.NOFRAME)
+        else:
+            self.screen = pygame.display.set_mode(self.ss)
+
+if __name__ == '__main__':
+    print(f'SCREENSIZE is: {SCREENSIZE[0]}, {SCREENSIZE[1]}')
+
+    s = Screen((200, 200), (400, 400), 2)
+
+    running = 1
+    while running:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                running = 0
+
+        pygame.display.flip()
