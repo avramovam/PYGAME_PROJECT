@@ -1,4 +1,11 @@
-from typing import List
+from typing import List, Tuple, Union
+
+import pygame
+
+
+def clamp(value: int, mn: int, mx: int):
+    return min(mx, max(mn, value))
+
 
 class Entity:
     '''Класс для наследования классов для создания внутреигровых одинаковых, но уникальных объектов.
@@ -78,3 +85,18 @@ class EntityGroup:
         for ins in running: ins.do_step()
         for ins in running: ins.do_step_after()
         for ins in running: ins.do_alerts()
+
+class Screen:
+    def __init__(self, canvas_size: Tuple[int, int], realscreen_size: Tuple[int, int], fullscreen_mode: bool = False):
+        self.cs = self.csw, self.csh = canvas_size
+        self.ss = self.ssw, self.ssh = realscreen_size
+        self.canvas = pygame.Surface(self.cs)
+        self.screen = pygame.display.set_mode(self.ss, (bool(fullscreen_mode) * pygame.FULLSCREEN))
+
+    def get_canvas(self):
+        return
+
+    def update_screen(self, size: Tuple[int, int] = None, fullscreen_mode: bool = False):
+        if size is None:
+            size = self.ss
+        self.screen = pygame.display.set_mode(size, (bool(fullscreen_mode) * pygame.FULLSCREEN))
