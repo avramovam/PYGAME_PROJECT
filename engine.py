@@ -107,7 +107,10 @@ class Screen:
        | 2 - смешанный режим (оконнный на весь экран)'''
     def __init__(self, canvas_size: Tuple[int, int], realscreen_size: Tuple[int, int], fullscreen_mode: int = 0, resizable_mode: bool = True):
         self.cs = self.csw, self.csh = canvas_size
-        self.ss = self.ssw, self.ssh = realscreen_size
+        if fullscreen_mode == 2:
+            self.ss = self.ssw, self.ssh = SCREENSIZE
+        else:
+            self.ss = self.ssw, self.ssh = realscreen_size
         self.canvas = pygame.Surface(self.cs)
         self.fm = clamp(fullscreen_mode, 0, 2)
         self.rm = bool(resizable_mode)
@@ -145,7 +148,10 @@ class Screen:
         if resizable_mode is None:
             resizable_mode = self.rm
 
-        self.ss = self.ssw, self.ssh = size
+        if self.fm == 2:
+            self.ss = self.ssw, self.ssh = SCREENSIZE
+        else:
+            self.ss = self.ssw, self.ssh = size
 
         self.fm = clamp(fullscreen_mode, 0, 2)
         self.rm = bool(resizable_mode)
@@ -174,7 +180,7 @@ if __name__ == '__main__':
     pixel_size = 2
     canvas_size = (canvas_w, canvas_h)
     screen_size = (canvas_w*pixel_size, canvas_h*pixel_size)
-    s = Screen(canvas_size, screen_size, 0, True)
+    s = Screen(canvas_size, screen_size, 1, True)
 
     running = 1
     while running:
