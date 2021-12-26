@@ -1,14 +1,10 @@
 import os
 import sys
-from ctypes import windll
 
 from typing import List, Tuple, Union
 from math import sin, cos, radians, degrees, floor, ceil
 
 import pygame
-
-
-SCREENSIZE = windll.user32.GetSystemMetrics(0), windll.user32.GetSystemMetrics(1)
 
 
 def clamp(value: int, mn: int, mx: int) -> int:
@@ -172,6 +168,9 @@ class Screen:
 
 
 if __name__ == '__main__':
+    pygame.init()
+    a = pygame.display.Info()
+    SCREENSIZE = a.current_w, a.current_h
     print('TEST RUN')
     print(f'SCREENSIZE is: {SCREENSIZE[0]}, {SCREENSIZE[1]}')
 
@@ -180,7 +179,7 @@ if __name__ == '__main__':
     pixel_size = 2
     canvas_size = (canvas_w, canvas_h)
     screen_size = (canvas_w*pixel_size, canvas_h*pixel_size)
-    s = Screen(canvas_size, screen_size, 1, True)
+    s = Screen(canvas_size, screen_size, 0, True)
 
     running = 1
     while running:
