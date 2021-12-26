@@ -11,6 +11,17 @@ def clamp(value: int, mn: int, mx: int) -> int:
     return min(mx, max(mn, value))
 
 
+def pygame_init():
+    pygame.init()
+
+
+def pygame_videoinfo():
+    return pygame.display.Info()
+
+def get_screensize(videoinfo) -> Tuple[int, int]:
+    return (videoinfo.current_w, videoinfo.current_h)
+
+
 class Entity:
     '''Класс для наследования классов для создания внутреигровых одинаковых, но уникальных объектов.
        Главная способность классов, наследовавших Entity - создавание объектов Instance.
@@ -168,9 +179,8 @@ class Screen:
 
 
 if __name__ == '__main__':
-    pygame.init()
-    a = pygame.display.Info()
-    SCREENSIZE = a.current_w, a.current_h
+    pygame_init()
+    SCREENSIZE = get_screensize(pygame_videoinfo())
     print('TEST RUN')
     print(f'SCREENSIZE is: {SCREENSIZE[0]}, {SCREENSIZE[1]}')
 
