@@ -8,17 +8,24 @@ import pygame
 
 
 def clamp(value: int, mn: int, mx: int) -> int:
+    '''Возвращает значение, равное аргументу value или нижней или верхней грани (mn и mx соответственно), если value выходит за них.'''
     return min(mx, max(mn, value))
 
 
 def pygame_init():
+    '''Вызывает pygame.init().'''
     pygame.init()
 
 
 def pygame_videoinfo():
+    '''Возвращает _VidInfo путем вызова pygame.display.Info(). Необходимо для get_screensize(videinfo) в качестве аргумента.
+       Работает только после вызова pygame.init().'''
     return pygame.display.Info()
 
 def get_screensize(videoinfo) -> Tuple[int, int]:
+    '''Получить размер экрана формата (Ширина, Высота).
+       В качестве аргумента нужно вставить _VidInfo, получаемый командой pygame.display.Info().
+       pygame.display.Info() также можно получить командой pygame_videoinfo().'''
     return (videoinfo.current_w, videoinfo.current_h)
 
 
@@ -33,16 +40,16 @@ class Entity:
        event_step_after - событие, выполняемое Instance каждый игровой кадр, но после event_step всех Instance.
        event_alerts[i] - событие, выполняемое Instance в случае, если alerts[i] = 0. каждый alerts[i] понижается на 1 каждый игровой кадр, пока не достигнет -1.
        event_user[i] - пользовательское событие, выполняемое Instance в случае его прямого вызова.'''
-    def __init__(self):
+    def __init__(self, event_create = None, event_step = None, event_step_before = None, event_step_after = None, event_alerts, alerts, event_user):
         self.instances: List[Instance] = []
 
-        self.event_create = None
-        self.event_step = None
-        self.event_step_before = None
-        self.event_step_after = None
-        self.event_alerts = []
-        self.alerts = []
-        self.event_user = []
+        self.event_create = event_create
+        self.event_step = event_step
+        self.event_step_before = event_step_before
+        self.event_step_after = event_step_after
+        self.event_alerts = event_alerts
+        self.alerts = alerts
+        self.event_user = event_user
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.'''
@@ -82,6 +89,7 @@ class Instance:
                 self.entity.alerts[alert] -= 1
 
     def do_user(self, index: int):
+        '''Выполнение '''
         self.entity.event_user[index](target=self)
 
 
