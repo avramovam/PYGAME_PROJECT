@@ -29,6 +29,14 @@ def get_screensize(videoinfo) -> Tuple[int, int]:
     return (videoinfo.current_w, videoinfo.current_h)
 
 
+def load_image(name, dirname='data'):
+    path = os.path.join(dirname, name)
+    if not os.path.isfile(path):
+        raise RuntimeError
+    img = pygame.image.load(path)
+    return img
+
+
 class Entity:
     '''Класс для наследования классов для создания внутреигровых одинаковых, но уникальных объектов.
        Главная способность классов, наследовавших Entity - создавание объектов Instance.
