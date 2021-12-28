@@ -58,16 +58,13 @@ class Entity:
        event_step_after - событие, выполняемое Instance каждый игровой кадр, но после event_step всех Instance.
        event_alerts[i] - событие, выполняемое Instance в случае, если alerts[i] = 0. каждый alerts[i] понижается на 1 каждый игровой кадр, пока не достигнет -1.
        event_user[i] - пользовательское событие, выполняемое Instance в случае его прямого вызова.'''
-    def __init__(self, event_create = None, event_step = None, event_step_before = None, event_step_after = None, event_alerts = [], alerts = [], event_user = []):
+    def __init__(self, event_create = None, event_step = None, event_step_before = None, event_step_after = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
         self.event_step = event_step
         self.event_step_before = event_step_before
         self.event_step_after = event_step_after
-        self.event_alerts = event_alerts
-        self.alerts = alerts
-        self.event_user = event_user
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.'''
