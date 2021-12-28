@@ -12,6 +12,16 @@ def clamp(value: int, mn: int, mx: int) -> int:
     return min(mx, max(mn, value))
 
 
+def gcd(a: int, b: int) -> int:
+    '''Наибольший общий делитель.'''
+    if a == 0 or b == 0:
+        return a+b
+    if a > b:
+        return gcd(a%b, b)
+    else:
+        return gcd(a, b%a)
+
+
 def pygame_init():
     '''Вызывает pygame.init().'''
     pygame.init()
