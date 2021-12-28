@@ -94,19 +94,6 @@ class Instance:
         if self.entity.event_step_after is not None:
             self.entity.event_step_after(target=self)
 
-    def do_alerts(self):
-        '''Выполнение будильников'''
-        for alert in range(len(self.entity.alerts)):
-            getalert = self.entity.alerts[alert]
-            if getalert == 0:
-                self.entity.event_alerts[alert](target=self)
-            if getalert >= 0:
-                self.entity.alerts[alert] -= 1
-
-    def do_user(self, index: int):
-        '''Выполнение '''
-        self.entity.event_user[index](target=self)
-
 
 class EntityGroup:
     def __init__(self, entities: List[Entity] = None):
@@ -124,7 +111,6 @@ class EntityGroup:
         for ins in running: ins.do_step_before()
         for ins in running: ins.do_step()
         for ins in running: ins.do_step_after()
-        for ins in running: ins.do_alerts()
 
 
 class Screen:
