@@ -7,6 +7,15 @@ from math import sin, cos, radians, degrees, floor, ceil
 import pygame
 
 
+def lengthdir_x(len, dir):
+    '''координата x конца вектора с длиной len и углом dir.'''
+    return len * cos(radians(dir))
+
+def lengthdir_y(len, dir):
+    '''координата x конца вектора с длиной len и углом dir.'''
+    return len * -sin(radians(dir))
+
+
 def clamp(value: int, mn: int, mx: int) -> int:
     '''Возвращает значение, равное аргументу value или нижней или верхней грани (mn и mx соответственно), если value выходит за них.'''
     return min(mx, max(mn, value))
