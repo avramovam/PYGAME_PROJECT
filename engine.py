@@ -120,20 +120,20 @@ class Instance:
         if self.entity.event_step_after is not None:
             self.entity.event_step_after(target=self)
 
-    def do_draw(self):
+    def do_draw(self, surface):
         '''Отрисовка'''
         if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self)
+            self.entity.event_step_after(target=self, surface=surface)
 
-    def do_draw_before(self):
+    def do_draw_before(self, surface):
         '''До-отрисовка'''
         if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self)
+            self.entity.event_step_after(target=self, surface=surface)
 
-    def do_draw_after(self):
+    def do_draw_after(self, surface):
         '''После-отрисовка'''
         if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self)
+            self.entity.event_step_after(target=self, surface=surface)
 
 
 class EntityGroup:
@@ -143,7 +143,7 @@ class EntityGroup:
         else:
             self.entities = entities
 
-    def do_step(self):
+    def do_step(self, surface_to_draw: pygame.Surface = None):
         running = []
         for ent in self.entities:
             for ins in ent.instances:
@@ -152,6 +152,10 @@ class EntityGroup:
         for ins in running: ins.do_step_before()
         for ins in running: ins.do_step()
         for ins in running: ins.do_step_after()
+        if surface_to_draw is not None:
+            for ins in running: ins.do_draw_before(surface_to_draw)
+            for ins in running: ins.do_draw(surface_to_draw)
+            for ins in running: ins.do_draw_after(surface_to_draw)
 
 
 class Screen:
