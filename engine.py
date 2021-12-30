@@ -154,11 +154,11 @@ class Screen:
        | 1 - полноэкранный режим
        | 2 - смешанный режим (оконнный на весь экран)'''
     def __init__(self, canvas_size: Tuple[int, int], realscreen_size: Tuple[int, int], fullscreen_mode: int = 0, resizable_mode: bool = True):
-        self.cs = self.csw, self.csh = canvas_size
+        self.cs = self.cw, self.ch = canvas_size
         if fullscreen_mode == 2:
-            self.ss = self.ssw, self.ssh = SCREENSIZE
+            self.ss = self.sw, self.sh = SCREENSIZE
         else:
-            self.ss = self.ssw, self.ssh = realscreen_size
+            self.ss = self.sw, self.sh = realscreen_size
         self.canvas = pygame.Surface(self.cs)
         self.fm = clamp(fullscreen_mode, 0, 2)
         self.rm = bool(resizable_mode)
@@ -168,6 +168,9 @@ class Screen:
             self.screen = pygame.display.set_mode(SCREENSIZE, pygame.NOFRAME)
         else:
             self.screen = pygame.display.set_mode(self.ss, (self.rm * pygame.RESIZABLE))
+
+        self.cd = ((self.cw**2)+(self.ch**2))**0.5
+        self.sd = ((self.sw**2)+(self.sh**2))**0.5
 
     def get_canvas(self) -> pygame.Surface:
         return self.canvas
@@ -211,8 +214,8 @@ class Screen:
             self.screen = pygame.display.set_mode(self.ss, (self.rm * pygame.RESIZABLE))
 
     def draw_screen(self):
-        scale_level = min(self.ssw/self.csw, self.ssh/self.csh)
-        scaled_size = (self.csw * scale_level, self.csh * scale_level)
+        scale_level = min(self.ssw/self.cw, self.ssh/self.ch)
+        scaled_size = (self.cw * scale_level, self.ch * scale_level)
         delta_width = self.ssw - scaled_size[0]
         delta_height = self.ssh - scaled_size[1]
         self.screen.fill('black')
