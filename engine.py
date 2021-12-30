@@ -169,8 +169,15 @@ class Screen:
         else:
             self.screen = pygame.display.set_mode(self.ss, (self.rm * pygame.RESIZABLE))
 
-        self.cd = ((self.cw**2)+(self.ch**2))**0.5
-        self.sd = ((self.sw**2)+(self.sh**2))**0.5
+        self.cd = ceil(((self.cw**2)+(self.ch**2))**0.5)
+        self.sd = ceil(((self.sw**2)+(self.sh**2))**0.5)
+
+        self.cw2 = self.cw//2
+        self.ch2 = self.ch//2
+        self.cd2 = self.cd//2
+        self.sw2 = self.sw//2
+        self.sh2 = self.sh//2
+        self.sd2 = self.sd//2
 
     def get_canvas(self) -> pygame.Surface:
         return self.canvas
@@ -189,6 +196,42 @@ class Screen:
 
     def get_screen_size(self) -> Tuple[int, int]:
         return self.ss
+
+    def get_canvas_width(self) -> int:
+        return self.cw
+
+    def get_canvas_height(self) -> int:
+        return self.ch
+
+    def get_screen_width(self) -> int:
+        return self.sw
+
+    def get_screen_height(self) -> int:
+        return self.sh
+
+    def get_canvas_halfwidth(self) -> int:
+        return self.cw2
+
+    def get_canvas_halfheight(self) -> int:
+        return self.ch2
+
+    def get_screen_halfwidth(self) -> int:
+        return self.sw2
+
+    def get_screen_halfheight(self) -> int:
+        return self.sh2
+
+    def get_canvas_diagonal(self) -> int:
+        return self.cd
+
+    def get_canvas_halfdiagonal(self) -> int:
+        return self.cd2
+
+    def get_screen_diagonal(self) -> int:
+        return self.sd
+
+    def get_screen_halfdiagonal(self) -> int:
+        return self.sd2
 
     def update_screen(self, size: Tuple[int, int] = None, fullscreen_mode: int = None, resizable_mode: bool = None):
         '''Обновить данные экрана. Значение None в аргументах означает сохранение предыдущего значения.'''
