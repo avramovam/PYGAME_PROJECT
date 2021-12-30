@@ -74,18 +74,27 @@ class Entity:
         self.event_draw_before = event_draw_before
         self.event_draw_after = event_draw_after
 
-    def instance(self):
-        '''Создает новый Instance данного Entity, перенимающий с него все события.'''
-        new_instance = Instance(entity = self)
+    def instance(self, **specific):
+        '''Создает новый Instance данного Entity, перенимающий с него все события.
+
+        В качестве **specific (kw_args) можно задать специфические значения переменных, заданных в event_create.'''
+        new_instance = Instance(entity = self, spec = specific)
         self.instances.append(new_instance)
         return new_instance
 
 
 class Instance:
-    def __init__(self, entity: Entity):
+    def __init__(self, entity: Entity, spec: dict = None):
         self.entity = entity
         if self.entity.event_create is not None:
             self.entity.event_create(target=self)
+
+        if spec != None:
+            for varname in spec:
+                if type(spec[varname]) is str:
+                    exec(f'self.{varname} = "{spec[varname]}"')
+                else:
+                    exec(f'self.{varname} = {spec[varname]}')
 
     def do_step(self):
         '''Выполнение шага'''
