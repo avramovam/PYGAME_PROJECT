@@ -51,20 +51,28 @@ class Entity:
     '''Класс для наследования классов для создания внутреигровых одинаковых, но уникальных объектов.
        Главная способность классов, наследовавших Entity - создавание объектов Instance.
 
-       ВСЕ СОБЫТИЯ:
-       event_create - событие, выполняемое Instance сразу же после его создания.
-       event_step - событие, выполняемое Instance каждый игровой кадр.
-       event_step_before - событие, выполняемое Instance каждый игровой кадр, но до event_step всех Instnace.
-       event_step_after - событие, выполняемое Instance каждый игровой кадр, но после event_step всех Instance.
-       event_alerts[i] - событие, выполняемое Instance в случае, если alerts[i] = 0. каждый alerts[i] понижается на 1 каждый игровой кадр, пока не достигнет -1.
-       event_user[i] - пользовательское событие, выполняемое Instance в случае его прямого вызова.'''
-    def __init__(self, event_create = None, event_step = None, event_step_before = None, event_step_after = None):
+       ВСЕ СОБЫТИЯ (в порядке их выполнения):
+       event_create - событие, выполняемое сразу же после создания. Не выполняется повторно.
+
+       event_step_before - событие, выполняемое каждый игровой кадр, но до event_step всех Instance.
+       event_step - событие, выполняемое каждый игровой кадр.
+       event_step_after - событие, выполняемое каждый игровой кадр, но после event_step всех Instance.
+
+       event_draw_before - событие, выполняемое каждый игровой кадр, но до event_draw всех Instance.
+       event_draw - событие, выполняемое каждый игровой кадр.
+       event_draw_after - событие, выполняемое каждый игровой кадр, но после event_draw всех Instance.'''
+    def __init__(self, event_create = None,
+                       event_step = None, event_step_before = None, event_step_after = None,
+                       event_draw = None, event_draw_before = None, event_draw_after = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
         self.event_step = event_step
         self.event_step_before = event_step_before
         self.event_step_after = event_step_after
+        self.event_draw = event_draw
+        self.event_draw_before = event_draw_before
+        self.event_draw_after = event_draw_after
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.'''
@@ -91,6 +99,21 @@ class Instance:
 
     def do_step_after(self):
         '''Выполнение после-шага'''
+        if self.entity.event_step_after is not None:
+            self.entity.event_step_after(target=self)
+
+    def do_draw(self):
+        '''Отрисовка'''
+        if self.entity.event_step_after is not None:
+            self.entity.event_step_after(target=self)
+
+    def do_draw_before(self):
+        '''До-отрисовка'''
+        if self.entity.event_step_after is not None:
+            self.entity.event_step_after(target=self)
+
+    def do_draw_after(self):
+        '''После-отрисовка'''
         if self.entity.event_step_after is not None:
             self.entity.event_step_after(target=self)
 
