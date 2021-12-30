@@ -125,18 +125,18 @@ class Instance:
 
     def do_draw(self, surface):
         '''Отрисовка'''
-        if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self, surface=surface)
+        if self.entity.event_draw is not None:
+            self.entity.event_draw(target=self, surface=surface)
 
     def do_draw_before(self, surface):
         '''До-отрисовка'''
-        if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self, surface=surface)
+        if self.entity.event_draw_before is not None:
+            self.entity.event_draw_before(target=self, surface=surface)
 
     def do_draw_after(self, surface):
         '''После-отрисовка'''
-        if self.entity.event_step_after is not None:
-            self.entity.event_step_after(target=self, surface=surface)
+        if self.entity.event_draw_after is not None:
+            self.entity.event_draw_after(target=self, surface=surface)
 
 
 class EntityGroup:
