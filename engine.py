@@ -93,27 +93,20 @@ class Entity:
         self.event_draw_before = event_draw_before
         self.event_draw_after = event_draw_after
 
-    def instance(self, **specific):
+    def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.
 
         В качестве **specific (kw_args) можно задать специфические значения переменных, заданных в event_create.'''
-        new_instance = Instance(entity = self, spec = specific)
+        new_instance = Instance(entity = self)
         self.instances.append(new_instance)
         return new_instance
 
 
 class Instance:
-    def __init__(self, entity: Entity, spec: dict = None):
+    def __init__(self, entity: Entity):
         self.entity = entity
         if self.entity.event_create is not None:
             self.entity.event_create(target=self)
-
-        if spec != None:
-            for varname in spec:
-                if type(spec[varname]) is str:
-                    exec(f'self.{varname} = "{spec[varname]}"')
-                else:
-                    exec(f'self.{varname} = {spec[varname]}')
 
     def do_step(self):
         '''Выполнение шага'''
@@ -266,9 +259,9 @@ class Screen:
             resizable_mode = self.rm
 
         if self.fm == 2:
-            self.ss = self.ssw, self.ssh = SCREENSIZE
+            self.ss = self.sw, self.sh = SCREENSIZE
         else:
-            self.ss = self.ssw, self.ssh = size
+            self.ss = self.sw, self.sh = size
 
         self.fm = clamp(fullscreen_mode, 0, 2)
         self.rm = bool(resizable_mode)
@@ -279,11 +272,21 @@ class Screen:
         else:
             self.screen = pygame.display.set_mode(self.ss, (self.rm * pygame.RESIZABLE))
 
+        self.cd = ceil(((self.cw ** 2) + (self.ch ** 2)) ** 0.5)
+        self.sd = ceil(((self.sw ** 2) + (self.sh ** 2)) ** 0.5)
+
+        self.cw2 = self.cw // 2
+        self.ch2 = self.ch // 2
+        self.cd2 = self.cd // 2
+        self.sw2 = self.sw // 2
+        self.sh2 = self.sh // 2
+        self.sd2 = self.sd // 2
+
     def draw_screen(self):
-        scale_level = min(self.ssw/self.cw, self.ssh/self.ch)
+        scale_level = min(self.sw/self.cw, self.sh/self.ch)
         scaled_size = (self.cw * scale_level, self.ch * scale_level)
-        delta_width = self.ssw - scaled_size[0]
-        delta_height = self.ssh - scaled_size[1]
+        delta_width = self.sw - scaled_size[0]
+        delta_height = self.sh - scaled_size[1]
         self.screen.fill('black')
         self.screen.blit(pygame.transform.scale(self.canvas, scaled_size), (delta_width//2, delta_height//2))
 
