@@ -16,6 +16,16 @@ def lengthdir_y(len, dir):
     return len * -sin(radians(dir))
 
 
+def speed_upf(units_per_second, fps):
+    '''Возвращает скорость units per frame (т. е. едениц за кадр).
+    Необходимо для ежекадровых функций объектов, которые отсчитывают время или двигают объекты.
+
+       Аргументы на вход:
+       units_per_second - сколько едениц должно быть в секунду
+       fps              - сколько кадров в секунду'''
+    return units_per_second/fps
+
+
 def clamp(value: int, mn: int, mx: int) -> int:
     '''Возвращает значение, равное аргументу value или нижней или верхней грани (mn и mx соответственно), если value выходит за них.'''
     return min(mx, max(mn, value))
