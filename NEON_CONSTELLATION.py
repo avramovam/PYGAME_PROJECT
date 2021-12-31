@@ -50,8 +50,8 @@ def BG_draw_before(target, surface: pygame.Surface):
     #pygame.draw.circle(surface, 'yellow', (2, 2), 5.0)
     ox = engine.lengthdir_x(target.offset, target.angle)
     oy = engine.lengthdir_y(target.offset, target.angle)
-    width = screen.get_canvas_width()
-    height = screen.get_canvas_height()
+    width = surface.get_width()
+    height = surface.get_height()
     for x in ((-1, 0),(0, 1))[ox<0]:     # этот цикл отрисовывает картинку четырежды, чтобы в любом случае
         for y in ((-1, 0),(0, 1))[oy<0]: # замостить полностью холст. ((-1, 0),(0, 1))[ox<0] лишь оптимизирует это
             surface.blit(target.image, (ox + (x*width),                                                  # - леша
