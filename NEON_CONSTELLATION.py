@@ -12,8 +12,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #1
-    Daria Stolyarova                                                                              30.12.2021
+    Andrey Avramov                                                                                        #2
+    Daria Stolyarova                                                                              01.01.2022
 ''')
 
 pygame.init()
@@ -62,7 +62,7 @@ BG = engine.Entity(event_create=BG_create, event_step=BG_step, event_draw_before
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ENTITYGROUP]
-eg_mainmenu = engine.EntityGroup([BG])
+room_mainmenu = engine.Room([BG])
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
@@ -87,7 +87,7 @@ while game_running:
 
 
     screen.get_canvas().fill('black')
-    eg_mainmenu.do_step(screen.get_canvas())
+    room_mainmenu.do_step(screen.get_canvas())
     screen.draw_screen()
     pygame.display.flip()
     clock.tick(FPS)

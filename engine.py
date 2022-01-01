@@ -109,7 +109,8 @@ class Entity:
        event_draw_after - событие, выполняемое каждый игровой кадр, но после event_draw всех Instance.'''
     def __init__(self, event_create = None,
                        event_step = None, event_step_before = None, event_step_after = None,
-                       event_draw = None, event_draw_before = None, event_draw_after = None):
+                       event_draw = None, event_draw_before = None, event_draw_after = None,
+                       event_room_start = None, event_room_end = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
@@ -119,6 +120,8 @@ class Entity:
         self.event_draw = event_draw
         self.event_draw_before = event_draw_before
         self.event_draw_after = event_draw_after
+        self.event_room_start = event_room_start
+        self.event_room_end = event_room_end
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.
@@ -165,8 +168,22 @@ class Instance:
         if self.entity.event_draw_after is not None:
             self.entity.event_draw_after(target=self, surface=surface)
 
+    def do_room_start(self):
+        '''Вход в комнату'''
+        if self.entity.event_room_start is not None:
+            self.entity.event_room_start(target=self)
 
-class EntityGroup:
+    def do_room_end(self):
+        '''Выход из комнаты'''
+        if self.entity.event_room_end is not None:
+            self.entity.event_room_end(target=self)
+
+
+class Room:
+    '''Класс комнат. Комнаты помогают управлять несколькими "игровыми экранами" и ежекадровыми функциями.
+       На вход принимает список объектов Entity, Instance которых будут выполнять ежекадровые события
+       при вызове метода do_step() или одиночные события event_room_stand и event_room_end при вызове
+       методов start() и end() соответственно.'''
     def __init__(self, entities: List[Entity] = None):
         if entities is None:
             self.entities = []
@@ -186,6 +203,16 @@ class EntityGroup:
             for ins in running: ins.do_draw_before(surface_to_draw)
             for ins in running: ins.do_draw(surface_to_draw)
             for ins in running: ins.do_draw_after(surface_to_draw)
+
+    def start(self):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_room_start()
+
+    def end(self):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_room_end()
 
 
 class Screen:
