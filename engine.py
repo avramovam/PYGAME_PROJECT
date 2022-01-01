@@ -38,9 +38,9 @@ def interpolate(x, y, power: int = 1, side: Union[int, bool] = 0):
         return (x+y)/2
     else:
         if side:
-            return (interpolate(x,y,power-1,side), y)
+            return (interpolate(x, y, power - 1, side) + y) / 2
         else:
-            return (x, interpolate(x, y, power - 1, side))
+            return (x + interpolate(x, y, power - 1, side)) / 2
 
 
 def speed_upf(units_per_second, fps):
