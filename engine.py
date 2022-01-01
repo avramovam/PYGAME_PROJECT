@@ -34,13 +34,18 @@ def interpolate(x, y, power: int = 1, side: Union[int, bool] = 0):
            side
                Сторона (0/1). Важно когда power > 1. При side=0, функция вернет значение ближе к x нежели к y.'''
     power = max(power, 1)
-    if power == 1:
-        return (x+y)/2
+    div = 2**power
+    if side:
+        return (x*1/div) + (y*(div-1)/div)
     else:
-        if side:
-            return (interpolate(x, y, power - 1, side) + y) / 2
-        else:
-            return (x + interpolate(x, y, power - 1, side)) / 2
+        return (x*(div-1)/div) + (y*1/div)
+    # if power == 1:
+    #     return (x+y)/2
+    # else:
+    #     if side:
+    #         return (interpolate(x, y, power - 1, side) + y) / 2
+    #     else:
+    #         return (x + interpolate(x, y, power - 1, side)) / 2
 
 
 def speed_upf(units_per_second, fps):
