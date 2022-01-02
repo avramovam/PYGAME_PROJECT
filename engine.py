@@ -34,13 +34,18 @@ def interpolate(x, y, power: int = 1, side: Union[int, bool] = 0):
            side
                Сторона (0/1). Важно когда power > 1. При side=0, функция вернет значение ближе к x нежели к y.'''
     power = max(power, 1)
-    if power == 1:
-        return (x+y)/2
+    div = 2**power
+    if side:
+        return (x*1/div) + (y*(div-1)/div)
     else:
-        if side:
-            return (interpolate(x,y,power-1,side), y)
-        else:
-            return (x, interpolate(x, y, power - 1, side))
+        return (x*(div-1)/div) + (y*1/div)
+    # if power == 1:
+    #     return (x+y)/2
+    # else:
+    #     if side:
+    #         return (interpolate(x, y, power - 1, side) + y) / 2
+    #     else:
+    #         return (x + interpolate(x, y, power - 1, side)) / 2
 
 
 def speed_upf(units_per_second, fps):
@@ -109,7 +114,8 @@ class Entity:
        event_draw_after - событие, выполняемое каждый игровой кадр, но после event_draw всех Instance.'''
     def __init__(self, event_create = None,
                        event_step = None, event_step_before = None, event_step_after = None,
-                       event_draw = None, event_draw_before = None, event_draw_after = None):
+                       event_draw = None, event_draw_before = None, event_draw_after = None,
+                       event_room_start = None, event_room_end = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
@@ -119,6 +125,8 @@ class Entity:
         self.event_draw = event_draw
         self.event_draw_before = event_draw_before
         self.event_draw_after = event_draw_after
+        self.event_room_start = event_room_start
+        self.event_room_end = event_room_end
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.
@@ -165,8 +173,22 @@ class Instance:
         if self.entity.event_draw_after is not None:
             self.entity.event_draw_after(target=self, surface=surface)
 
+    def do_room_start(self):
+        '''Вход в комнату'''
+        if self.entity.event_room_start is not None:
+            self.entity.event_room_start(target=self)
 
-class EntityGroup:
+    def do_room_end(self):
+        '''Выход из комнаты'''
+        if self.entity.event_room_end is not None:
+            self.entity.event_room_end(target=self)
+
+
+class Room:
+    '''Класс комнат. Комнаты помогают управлять несколькими "игровыми экранами" и ежекадровыми функциями.
+       На вход принимает список объектов Entity, Instance которых будут выполнять ежекадровые события
+       при вызове метода do_step() или одиночные события event_room_stand и event_room_end при вызове
+       методов start() и end() соответственно.'''
     def __init__(self, entities: List[Entity] = None):
         if entities is None:
             self.entities = []
@@ -186,6 +208,30 @@ class EntityGroup:
             for ins in running: ins.do_draw_before(surface_to_draw)
             for ins in running: ins.do_draw(surface_to_draw)
             for ins in running: ins.do_draw_after(surface_to_draw)
+
+    def start(self):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_room_start()
+
+    def end(self):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_room_end()
+
+
+class rooms:
+    '''Здесь хранится действительная комната.
+       Не создавать экземпляры класса - переменная current_room хранится у самого класса.
+       Есть также функция rooms.change_current_room, позволяющая изменить переменную current_room
+       с последовательным вызовом метода end для предыдущего current_room и start для нового.'''
+    current_room = None
+    @staticmethod
+    def change_current_room(new_room: Room):
+        if rooms.current_room is not None:
+            rooms.current_room.end()
+        rooms.current_room = new_room
+        rooms.current_room.start()
 
 
 class Screen:
