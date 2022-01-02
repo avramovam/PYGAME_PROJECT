@@ -220,6 +220,20 @@ class Room:
                 ins.do_room_end()
 
 
+class rooms:
+    '''Здесь хранится действительная комната.
+       Не создавать экземпляры класса - переменная current_room хранится у самого класса.
+       Есть также функция rooms.change_current_room, позволяющая изменить переменную current_room
+       с последовательным вызовом метода end для предыдущего current_room и start для нового.'''
+    current_room = None
+    @staticmethod
+    def change_current_room(new_room: Room):
+        if rooms.current_room is not None:
+            rooms.current_room.end()
+        rooms.current_room = new_room
+        rooms.current_room.start()
+
+
 class Screen:
     '''Класс окна. В нем есть холст (на который наносятся нарисованные объекты) и дисплей (то, что показывается).
        Есть возможность создания полноэкранного режима.

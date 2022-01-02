@@ -13,7 +13,7 @@ print(''':P
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
     Andrey Avramov                                                                                        #2
-    Daria Stolyarova                                                                              01.01.2022
+    Daria Stolyarova                                                                              02.01.2022
 ''')
 
 pygame.init()
@@ -61,8 +61,10 @@ BG = engine.Entity(event_create=BG_create, event_step=BG_step, event_draw_before
 #endregion
 #endregion
 
-#region [ОБЪЯВЛЕНИЕ ENTITYGROUP]
+#region [ОБЪЯВЛЕНИЕ ROOM]
 room_mainmenu = engine.Room([BG])
+
+engine.rooms.change_current_room(room_mainmenu)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
@@ -87,7 +89,7 @@ while game_running:
 
 
     screen.get_canvas().fill('black')
-    room_mainmenu.do_step(screen.get_canvas())
+    engine.rooms.current_room.do_step(screen.get_canvas())
     screen.draw_screen()
     pygame.display.flip()
     clock.tick(FPS)
