@@ -18,8 +18,8 @@ by:                                                                             
 
 pygame.init()
 USER_SCREENSIZE = engine.get_screensize(engine.pygame_videoinfo()) # размер монитора пользователя
-scale = 20
-pixelscale = 3
+scale = 40
+pixelscale = 2
 screen = engine.Screen((16*scale, 9*scale), (16*scale*pixelscale, 9*scale*pixelscale), 0, 1)
 clock = pygame.time.Clock()
 FPS = 60
@@ -34,6 +34,17 @@ def UPF(units_per_second):
        имея скорость "еденицы в секунду" и количество кадров в секунду.
        Использовать в ежекадровых функциях где считается время или двигаются объекты.'''
     return engine.speed_upf(units_per_second, FPS)
+
+font_default = pygame.font.Font(None, 24)
+font_small =   pygame.font.Font(None, 18)
+font_heading = pygame.font.Font(None, 48)
+
+def instance_render_text(target):
+    '''Рендерит текст для target если есть target.string и target.font.
+       target.text содержит отрендеренные строчки текста.'''
+    target.text = []
+    for line in target.string.split('\n'):
+        target.text.append(target.font.render(line, True, target.text_color))
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ENTITY]
@@ -57,19 +68,101 @@ def BG_draw_before(target, surface: pygame.Surface):
             surface.blit(target.image, (ox + (x*width),                                                  # - леша
                                         oy + (y*height)))
 
-BG = engine.Entity(event_create=BG_create, event_step=BG_step, event_draw_before=BG_draw_before)
+EntBG = engine.Entity(event_create=BG_create, event_step=BG_step, event_draw_before=BG_draw_before)
+#endregion
+#region [MAINMENU TEXT]
+def mm_text_create(target):
+    target.x, target.y = 0, 0
+    target.font = font_default
+    target.string = 'Neon Constellation'
+    target.text_color = 'white'
+    target.text_align = 1  # 0 - слева, 1 - в центре, 2 - справа
+    instance_render_text(target)
+
+
+def mm_text_draw_after(target, surface: pygame.Surface):
+    lineoffset = 0
+    maxtw = max([x.get_width() for x in target.text])
+    for lineindex in range(len(target.text)):
+        tw = target.text[lineindex].get_width()
+        th = target.text[lineindex].get_height()
+        lineoffset += th+4
+        if target.text_align == 0:
+            surface.blit(target.text[lineindex], (target.x, target.y - (th//2) + lineoffset))
+        elif target.text_align == 2:
+            surface.blit(target.text[lineindex], (target.x + (maxtw - tw), target.y - (th//2) + lineoffset))
+        else:  # if target.text_align == 1:
+            surface.blit(target.text[lineindex], (target.x - (tw//2), target.y - (th//2) + lineoffset))
+
+EntMainMenuText = engine.Entity(event_create=mm_text_create, event_draw_after=mm_text_draw_after)
+#endregion
+#region [MAINMENU BUTTON]
+def mm_button_create(target):
+    target.x, target.y = 0, 0
+    target.font = font_default
+    target.string = 'Sample Text'
+    target.text_color = 'black'
+    instance_render_text(target)
+
+def mm_button_draw(target, surface: pygame.Surface):
+    tw = target.text[0].get_width()
+    th = target.text[0].get_height()
+    fs = 16 # размер поля между прямоугольником и текстом
+    rect_coords = (target.x - ((tw+fs)//2), target.y - ((th+fs)//2), tw+fs, th+fs)
+    text_coords = (target.x - (tw//2),      target.y - (th//2))
+    rounding = 4 # величина скругления задника
+    full_rounding = (rounding, rounding, rounding, rounding) # для всех углов
+    pygame.draw.rect(surface, 'white', rect_coords, 0, *full_rounding) # задник
+    pygame.draw.rect(surface, 'gray',  rect_coords, 3, *full_rounding) # обводка задника
+    surface.blit(target.text[0], text_coords)
+
+# EntMainMenuButton копирует метод создания и рендера текста из EntGameTitle
+EntMainMenuButton = engine.Entity(event_create=mm_button_create, event_draw=mm_button_draw)
 #endregion
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
-room_mainmenu = engine.Room([BG])
+room_mainmenu = engine.Room([EntBG, EntMainMenuText, EntMainMenuButton])
 
 engine.rooms.change_current_room(room_mainmenu)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
-bg1 = BG.instance()
+bg1 = EntBG.instance()
 bg1.image = img_bg
+
+gametitle = EntMainMenuText.instance()
+gametitle.x = screen.get_canvas_halfwidth()
+gametitle.y = 0
+gametitle.font = font_heading
+gametitle.string = 'Neon Constellation'
+instance_render_text(gametitle)
+
+creators = EntMainMenuText.instance()
+creators.x = 8
+creators.y = screen.get_canvas_height() - 80
+creators.font = font_small
+creators.text_align = 0
+creators.string = 'Создатели:\nАлексей Кожанов\nАндрей Аврамов\nДарья Столярова'
+instance_render_text(creators)
+
+mmb1 = EntMainMenuButton.instance()
+mmb1.x = screen.get_canvas_halfwidth()
+mmb1.y = screen.get_canvas_halfheight() - 48
+mmb1.string = 'Начать игру'
+instance_render_text(mmb1)
+
+mmb1 = EntMainMenuButton.instance()
+mmb1.x = screen.get_canvas_halfwidth()
+mmb1.y = screen.get_canvas_halfheight()
+mmb1.string = 'Настройки'
+instance_render_text(mmb1)
+
+mmb1 = EntMainMenuButton.instance()
+mmb1.x = screen.get_canvas_halfwidth()
+mmb1.y = screen.get_canvas_halfheight() + 48
+mmb1.string = 'Выйти'
+instance_render_text(mmb1)
 #endregion
 
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
