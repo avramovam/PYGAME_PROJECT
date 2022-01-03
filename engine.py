@@ -330,7 +330,7 @@ class Screen:
         self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
         delta_width = self.sw - self.scaled_size[0]
         delta_height = self.sh - self.scaled_size[1]
-        self.scaled_offset = (delta_width//2, delta_height//2)
+        self.canvas_offset = (delta_width//2, delta_height//2)
 
     def get_canvas(self) -> pygame.Surface:
         return self.canvas
@@ -386,6 +386,12 @@ class Screen:
     def get_screen_halfdiagonal(self) -> int:
         return self.sd2
 
+    def get_canvas_offset(self) -> Tuple[int, int]:
+        return self.canvas_offset
+
+    def get_canvas_scale_level(self) -> float:
+        return self.scale_level
+
     def update_screen(self, size: Tuple[int, int] = None, fullscreen_mode: int = None, resizable_mode: bool = None):
         '''Обновить данные экрана. Значение None в аргументах означает сохранение предыдущего значения.'''
         if size is None:
@@ -423,11 +429,16 @@ class Screen:
         self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
         delta_width = self.sw - self.scaled_size[0]
         delta_height = self.sh - self.scaled_size[1]
-        self.scaled_offset = (delta_width//2, delta_height//2)
+        self.canvas_offset = (delta_width//2, delta_height//2)
 
     def draw_screen(self):
         self.screen.fill('black')
-        self.screen.blit(pygame.transform.scale(self.canvas, self.scaled_size), self.scaled_offset)
+        self.screen.blit(pygame.transform.scale(self.canvas, self.scaled_size), self.canvas_offset)
+
+    def get_mousepos_on_canvas(self, origin_mousepos: Tuple[int, int]) -> Tuple[float, float]:
+        mx, my = origin_mousepos
+        ox, oy = self.canvas_offset
+        return (mx - ox) / self.scale_level, (my - oy) / self.scale_level
 
 
 if __name__ == '__main__':
