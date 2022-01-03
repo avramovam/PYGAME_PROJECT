@@ -115,7 +115,10 @@ class Entity:
     def __init__(self, event_create = None,
                        event_step = None, event_step_before = None, event_step_after = None,
                        event_draw = None, event_draw_before = None, event_draw_after = None,
-                       event_room_start = None, event_room_end = None):
+                       event_room_start = None, event_room_end = None,
+                       event_mouse_moved = None,
+                       event_mouse_pressed = None, event_mouse_released = None,
+                       event_kb_pressed = None, event_kb_released = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
@@ -127,6 +130,11 @@ class Entity:
         self.event_draw_after = event_draw_after
         self.event_room_start = event_room_start
         self.event_room_end = event_room_end
+        self.event_mouse_moved = event_mouse_moved
+        self.event_mouse_pressed = event_mouse_pressed
+        self.event_mouse_released = event_mouse_released
+        self.event_kb_pressed = event_kb_pressed
+        self.event_kb_released = event_kb_released
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.
@@ -183,6 +191,31 @@ class Instance:
         if self.entity.event_room_end is not None:
             self.entity.event_room_end(target=self)
 
+    def do_mouse_moved(self, mousepos):
+        '''Движение мыши'''
+        if self.entity.event_mouse_moved is not None:
+            self.entity.event_mouse_moved(target=self, mousepos=mousepos)
+
+    def do_mouse_pressed(self, mousepos, buttonid):
+        '''Нажатие кнопки мыши'''
+        if self.entity.event_mouse_pressed is not None:
+            self.entity.event_mouse_pressed(target=self, mousepos=mousepos, buttonid=buttonid)
+
+    def do_mouse_released(self, mousepos, buttonid):
+        '''Отпускание кнопки мыши'''
+        if self.entity.event_mouse_released is not None:
+            self.entity.event_mouse_released(target=self, mousepos=mousepos, buttonid=buttonid)
+
+    def do_kb_pressed(self, buttonid):
+        '''Нажатие кнопки мыши'''
+        if self.entity.event_kb_pressed is not None:
+            self.entity.event_kb_pressed(target=self, buttonid=buttonid)
+
+    def do_kb_released(self, buttonid):
+        '''Отпускание кнопки мыши'''
+        if self.entity.event_kb_released is not None:
+            self.entity.event_kb_released(target=self, buttonid=buttonid)
+
 
 class Room:
     '''Класс комнат. Комнаты помогают управлять несколькими "игровыми экранами" и ежекадровыми функциями.
@@ -218,6 +251,31 @@ class Room:
         for ent in self.entities:
             for ins in ent.instances:
                 ins.do_room_end()
+
+    def do_mouse_moved(self, mousepos):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_moved(mousepos)
+
+    def do_mouse_pressed(self, mousepos, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_pressed(mousepos, buttonid)
+
+    def do_mouse_released(self, mousepos, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_released(mousepos, buttonid)
+
+    def do_kb_pressed(self, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_kb_pressed(buttonid)
+
+    def do_kb_released(self, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_kb_released(buttonid)
 
 
 class rooms:
