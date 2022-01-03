@@ -328,8 +328,9 @@ class Screen:
 
         self.scale_level = min(self.sw/self.cw, self.sh/self.ch)
         self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
-        self.delta_width = self.sw - self.scaled_size[0]
-        self.delta_height = self.sh - self.scaled_size[1]
+        delta_width = self.sw - self.scaled_size[0]
+        delta_height = self.sh - self.scaled_size[1]
+        self.scaled_offset = (delta_width//2, delta_height//2)
 
     def get_canvas(self) -> pygame.Surface:
         return self.canvas
@@ -420,12 +421,13 @@ class Screen:
 
         self.scale_level = min(self.sw/self.cw, self.sh/self.ch)
         self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
-        self.delta_width = self.sw - self.scaled_size[0]
-        self.delta_height = self.sh - self.scaled_size[1]
+        delta_width = self.sw - self.scaled_size[0]
+        delta_height = self.sh - self.scaled_size[1]
+        self.scaled_offset = (delta_width//2, delta_height//2)
 
     def draw_screen(self):
         self.screen.fill('black')
-        self.screen.blit(pygame.transform.scale(self.canvas, self.scaled_size), (self.delta_width//2, self.delta_height//2))
+        self.screen.blit(pygame.transform.scale(self.canvas, self.scaled_size), self.scaled_offset)
 
 
 if __name__ == '__main__':
