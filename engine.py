@@ -115,7 +115,10 @@ class Entity:
     def __init__(self, event_create = None,
                        event_step = None, event_step_before = None, event_step_after = None,
                        event_draw = None, event_draw_before = None, event_draw_after = None,
-                       event_room_start = None, event_room_end = None):
+                       event_room_start = None, event_room_end = None,
+                       event_mouse_moved = None,
+                       event_mouse_pressed = None, event_mouse_released = None,
+                       event_kb_pressed = None, event_kb_released = None):
         self.instances: List[Instance] = []
 
         self.event_create = event_create
@@ -127,6 +130,11 @@ class Entity:
         self.event_draw_after = event_draw_after
         self.event_room_start = event_room_start
         self.event_room_end = event_room_end
+        self.event_mouse_moved = event_mouse_moved
+        self.event_mouse_pressed = event_mouse_pressed
+        self.event_mouse_released = event_mouse_released
+        self.event_kb_pressed = event_kb_pressed
+        self.event_kb_released = event_kb_released
 
     def instance(self):
         '''Создает новый Instance данного Entity, перенимающий с него все события.
@@ -183,6 +191,31 @@ class Instance:
         if self.entity.event_room_end is not None:
             self.entity.event_room_end(target=self)
 
+    def do_mouse_moved(self, mousepos):
+        '''Движение мыши'''
+        if self.entity.event_mouse_moved is not None:
+            self.entity.event_mouse_moved(target=self, mousepos=mousepos)
+
+    def do_mouse_pressed(self, mousepos, buttonid):
+        '''Нажатие кнопки мыши'''
+        if self.entity.event_mouse_pressed is not None:
+            self.entity.event_mouse_pressed(target=self, mousepos=mousepos, buttonid=buttonid)
+
+    def do_mouse_released(self, mousepos, buttonid):
+        '''Отпускание кнопки мыши'''
+        if self.entity.event_mouse_released is not None:
+            self.entity.event_mouse_released(target=self, mousepos=mousepos, buttonid=buttonid)
+
+    def do_kb_pressed(self, buttonid):
+        '''Нажатие кнопки мыши'''
+        if self.entity.event_kb_pressed is not None:
+            self.entity.event_kb_pressed(target=self, buttonid=buttonid)
+
+    def do_kb_released(self, buttonid):
+        '''Отпускание кнопки мыши'''
+        if self.entity.event_kb_released is not None:
+            self.entity.event_kb_released(target=self, buttonid=buttonid)
+
 
 class Room:
     '''Класс комнат. Комнаты помогают управлять несколькими "игровыми экранами" и ежекадровыми функциями.
@@ -218,6 +251,31 @@ class Room:
         for ent in self.entities:
             for ins in ent.instances:
                 ins.do_room_end()
+
+    def do_mouse_moved(self, mousepos):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_moved(mousepos)
+
+    def do_mouse_pressed(self, mousepos, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_pressed(mousepos, buttonid)
+
+    def do_mouse_released(self, mousepos, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_mouse_released(mousepos, buttonid)
+
+    def do_kb_pressed(self, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_kb_pressed(buttonid)
+
+    def do_kb_released(self, buttonid):
+        for ent in self.entities:
+            for ins in ent.instances:
+                ins.do_kb_released(buttonid)
 
 
 class rooms:
@@ -267,6 +325,12 @@ class Screen:
         self.sw2 = self.sw//2
         self.sh2 = self.sh//2
         self.sd2 = self.sd//2
+
+        self.scale_level = min(self.sw/self.cw, self.sh/self.ch)
+        self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
+        delta_width = self.sw - self.scaled_size[0]
+        delta_height = self.sh - self.scaled_size[1]
+        self.canvas_offset = (delta_width//2, delta_height//2)
 
     def get_canvas(self) -> pygame.Surface:
         return self.canvas
@@ -322,6 +386,12 @@ class Screen:
     def get_screen_halfdiagonal(self) -> int:
         return self.sd2
 
+    def get_canvas_offset(self) -> Tuple[int, int]:
+        return self.canvas_offset
+
+    def get_canvas_scale_level(self) -> float:
+        return self.scale_level
+
     def update_screen(self, size: Tuple[int, int] = None, fullscreen_mode: int = None, resizable_mode: bool = None):
         '''Обновить данные экрана. Значение None в аргументах означает сохранение предыдущего значения.'''
         if size is None:
@@ -355,13 +425,20 @@ class Screen:
         self.sh2 = self.sh // 2
         self.sd2 = self.sd // 2
 
+        self.scale_level = min(self.sw/self.cw, self.sh/self.ch)
+        self.scaled_size = (self.cw * self.scale_level, self.ch * self.scale_level)
+        delta_width = self.sw - self.scaled_size[0]
+        delta_height = self.sh - self.scaled_size[1]
+        self.canvas_offset = (delta_width//2, delta_height//2)
+
     def draw_screen(self):
-        scale_level = min(self.sw/self.cw, self.sh/self.ch)
-        scaled_size = (self.cw * scale_level, self.ch * scale_level)
-        delta_width = self.sw - scaled_size[0]
-        delta_height = self.sh - scaled_size[1]
         self.screen.fill('black')
-        self.screen.blit(pygame.transform.scale(self.canvas, scaled_size), (delta_width//2, delta_height//2))
+        self.screen.blit(pygame.transform.scale(self.canvas, self.scaled_size), self.canvas_offset)
+
+    def get_mousepos_on_canvas(self, origin_mousepos: Tuple[int, int]) -> Tuple[float, float]:
+        mx, my = origin_mousepos
+        ox, oy = self.canvas_offset
+        return (mx - ox) / self.scale_level, (my - oy) / self.scale_level
 
 
 if __name__ == '__main__':
