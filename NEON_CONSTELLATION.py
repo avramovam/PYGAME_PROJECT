@@ -374,6 +374,22 @@ fplayer.myboard = fboard
 print('Запуск главного цикла...')
 game_running = 1
 a = 0
+pygame.mixer.music.load('music.mp3')
+pygame.mixer.music.play()
+
+# Добавление события начала боя
+event_fight = 0
+# Событие меняет фон если установлено значение 1
+# Функция отображения текста
+def draw_text(self, words, screen, pos, size, colour, font_name='arial', centered=False):
+    font = pygame.font.SysFont(font_name, size)
+    text = font.render(words, False, colour)
+    text_size = text.get_size()
+    if centered:
+        pos[0] = pos[0] - text_size[0] // 2
+        pos[1] = pos[1] - text_size[1] // 2
+    screen.blit(text, pos)
+
 while game_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: # выход
