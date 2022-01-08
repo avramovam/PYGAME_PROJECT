@@ -13,8 +13,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #4
-    Daria Stolyarova                                                                              06.01.2022
+    Andrey Avramov                                                                                        #5
+    Daria Stolyarova                                                                              08.01.2022
 ''')
 
 pygame.init()
@@ -120,6 +120,10 @@ EntMainMenuText = engine.Entity(event_create=MainMenuText_create, event_draw=Mai
 def MainMenuButton_user0(): # Переход на поле
     bg1.gotofield = 1
 
+def MainMenuButton_user2(): # Выход
+    global game_running
+    game_running = 0
+
 def MainMenuButton_create(target):
     target.x, target.y = 0, 0
     target.font = font_default
@@ -160,18 +164,24 @@ def FieldBG_create(target):
     target.angle = 0
     target.offset = 8
     target.fadeout = 1
+    #target.x = 0
+    #target.y = 0
 
 def FieldBG_draw_before(target, surface):
     ox = 0
     oy = 0
-    width = surface.get_width()
-    height = surface.get_height()
-    surface.blit(target.image, (ox + (target.x * width), oy + (target.y * height)))
+    #width = surface.get_width()
+    #height = surface.get_height()
+    surface.blit(target.image, (ox, oy))
 
 EntFieldBG = engine.Entity(event_create=FieldBG_create, event_draw_before=FieldBG_draw_before)
 #endregion
-
 #region [FIELD BOARD]
+def FieldBoard_get_cell_coords(target, cellx, celly):
+    retx = target.start_x + (cellx*(target.cellsize+1))
+    rety = target.start_y + (celly*(target.cellsize+1))
+    return retx, rety
+
 def FieldBoard_user0(target, surface: pygame.Surface):
     '''Расчет start_x и start_y согласно центрированию на surface'''
     surface_center_x = surface.get_width()//2
@@ -180,9 +190,9 @@ def FieldBoard_user0(target, surface: pygame.Surface):
     target.start_y = surface_center_y - (target.height//2)
 
 def FieldBoard_create(target):
-    target.cellsize = 18
-    target.cellcount_x = 10
-    target.cellcount_y = 10
+    target.cellsize = 20
+    target.cellcount_x = 15
+    target.cellcount_y = 15
     # target.start_x = 0
     # target.start_y = 0
     target.width = ((target.cellsize+1) * target.cellcount_x) + 1
@@ -223,12 +233,85 @@ def FieldBoard_draw_before(target, surface: pygame.Surface):
 
 EntFieldBoard = engine.Entity(event_create=FieldBoard_create, event_draw_before=FieldBoard_draw_before)
 #endregion
+#region [FIELD PLAYER]
+def FieldPlayer_create(target):
+    target.x = 0 # где он щас
+    target.y = 0 # где он щас
+    target.xto = 0 # куда двигаться
+    target.yto = 0 # куда двигаться
+    target.cellx = 0 # в какой клетке
+    target.celly = 0 # в какой клетке
+    target.nextcellx = 0
+    target.nextcelly = 0
+    target.image = img_player_battle
+    target.image_angle = 0
+    target.myboard = None
+
+def FieldPlayer_step(target):
+    if target.myboard is not None:
+        target.xto, target.yto = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly) # получение left-top-края
+        # target.xto += target.myboard.cellsize//2 # xto = середина клетки
+        # target.yto += target.myboard.cellsize//2 # yto = середина клетки
+    ix = engine.interpolate(target.x, target.xto, 2, 0)
+    iy = engine.interpolate(target.y, target.yto, 2, 0)
+
+    if round(target.x, 2) == round(ix, 2): target.x = target.xto
+    else: target.x = ix
+
+    if round(target.y, 2) == round(iy, 2): target.y = target.yto
+    else: target.y = iy
+    #target.x = target.xto
+    #target.y = target.yto
+
+    dx = target.xto - target.x
+    dy = target.yto - target.y
+    if not (dx == dy == 0):
+        originangle = target.image_angle - 90
+        angleto = engine.point_direction(0, 0, dx, dy)
+        target.image_angle = (originangle + angleto)/2
+    else:
+        target.image_angle = engine.point_direction(target.cellx, target.celly,
+                                                    target.nextcellx, target.nextcelly) - 90
+
+def FieldPlayer_draw(target, surface: pygame.Surface):
+    myimage = pygame.transform.rotate(target.image, target.image_angle)
+    myimage_width = myimage.get_width()
+    myimage_height = myimage.get_height()
+    deltawidth = myimage_width - target.myboard.cellsize
+    deltaheight = myimage_height - target.myboard.cellsize
+    surface.blit(myimage,
+                 (target.x - deltawidth//2 + 1,
+                  target.y - deltaheight//2 + 1))
+    #surface.blit(myimage, (target.x - (myimage_width//2) + 1, target.y - (myimage_height//2) + 1))
+    #surface.blit(myimage, (target.x, target.y))
+
+def FieldPlayer_kb_pressed(target, buttonid):
+    if buttonid == pygame.K_LEFT:
+        target.cellx = engine.clamp(target.cellx - 1, 0, target.myboard.cellcount_x-1)
+        target.nextcellx = target.cellx - 1
+        target.nextcelly = target.celly
+    elif buttonid == pygame.K_RIGHT:
+        target.cellx = engine.clamp(target.cellx + 1, 0, target.myboard.cellcount_x-1)
+        target.nextcellx = target.cellx + 1
+        target.nextcelly = target.celly
+    elif buttonid == pygame.K_UP:
+        target.celly = engine.clamp(target.celly - 1, 0, target.myboard.cellcount_y-1)
+        target.nextcellx = target.cellx
+        target.nextcelly = target.celly - 1
+    elif buttonid == pygame.K_DOWN:
+        target.celly = engine.clamp(target.celly + 1, 0, target.myboard.cellcount_y-1)
+        target.nextcellx = target.cellx
+        target.nextcelly = target.celly + 1
+
+EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=FieldPlayer_step, event_draw=FieldPlayer_draw,
+                               event_kb_pressed=FieldPlayer_kb_pressed)
+#endregion
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
 room_mainmenu = engine.Room([EntMainMenuBG, EntMainMenuText, EntMainMenuButton])
 
-room_field = engine.Room([EntFieldBG, EntFieldBoard])
+room_field = engine.Room([EntFieldBG, EntFieldBoard, EntFieldPlayer])
 
 engine.rooms.change_current_room(room_mainmenu)
 #endregion
@@ -270,8 +353,17 @@ mmb3.x = screen.get_canvas_halfwidth()
 mmb3.y = screen.get_canvas_halfheight() + 48
 mmb3.string = 'Выйти'
 instance_render_text(mmb3)
+mmb3.press_link = MainMenuButton_user2
+
+
 
 fboard = EntFieldBoard.instance()
+
+bg2 = EntFieldBG.instance()
+bg2.image = img_bg
+
+fplayer = EntFieldPlayer.instance()
+fplayer.myboard = fboard
 #endregion
 
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
