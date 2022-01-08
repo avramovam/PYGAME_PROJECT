@@ -2,7 +2,7 @@ import os
 import sys
 
 from typing import List, Tuple, Union
-from math import sin, cos, radians, degrees, floor, ceil
+from math import sin, cos, radians, degrees, floor, ceil, acos
 
 import pygame
 
@@ -46,6 +46,46 @@ def interpolate(x, y, power: int = 1, side: Union[int, bool] = 0):
     #         return (interpolate(x, y, power - 1, side) + y) / 2
     #     else:
     #         return (x + interpolate(x, y, power - 1, side)) / 2
+
+
+def hypotenuse(a, b):
+    '''Гипотенуза по катетам a и b.'''
+    return (a**2 + b**2)**0.5
+
+
+def point_distance(x1, y1, x2, y2):
+    '''Расстояние между точками (x1;y1) и (x2;y2) (длина вектора)'''
+    return hypotenuse(x2-x1, y2-y1)
+
+def point_direction(x1, y1, x2, y2):
+    '''Угол направления от точки (x1;y1) к точке (x2;y2) (угол между вектором и осью X)
+
+       Пример (направление от точки A к точке B):
+
+       |
+       |
+       |
+       |
+       |A#######B    - вернет 0 градусов
+
+       |        B
+       |      #
+       |    #
+       |  #
+       |A________    - вернет 45 градусов
+
+       |B
+       |#
+       |#
+       |#
+       |A________    - вернет 90 градусов'''
+    x = x2-x1
+    y = y2-y1
+    # numerator = (x*1) + (y*0)                         |
+    # denominator = hypotenuse(x, y) * hypotenuse(1, 0) |
+    # cosinus = numerator/denominator                   V далее сокращенный вариант
+    cosinus = x/hypotenuse(x, y)
+    return degrees(acos(cosinus))
 
 
 def speed_upf(units_per_second, fps):
