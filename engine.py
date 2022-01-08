@@ -84,8 +84,12 @@ def point_direction(x1, y1, x2, y2):
     # numerator = (x*1) + (y*0)                         |
     # denominator = hypotenuse(x, y) * hypotenuse(1, 0) |
     # cosinus = numerator/denominator                   V далее сокращенный вариант
-    cosinus = x/hypotenuse(x, y)
-    return degrees(acos(cosinus))
+    denominator = hypotenuse(x, y)
+    if denominator != 0:
+        cosinus = x/denominator
+        return degrees(acos(cosinus))
+    else:
+        return 0
 
 
 def speed_upf(units_per_second, fps):
