@@ -87,7 +87,10 @@ def point_direction(x1, y1, x2, y2):
     denominator = hypotenuse(x, y)
     if denominator != 0:
         cosinus = x/denominator
-        return degrees(acos(cosinus))
+        if y <= 0:
+            return degrees(acos(cosinus))
+        else:
+            return 360-degrees(acos(cosinus))
     else:
         return 0
 
