@@ -372,13 +372,13 @@ fplayer.myboard = fboard
 
 #region [ГЛАВНЫЙ ЦИКЛ]
 print('Запуск главного цикла...')
-game_running = 1
-a = 0
 pygame.mixer.music.load('music.mp3')
 pygame.mixer.music.play()
-
+game_running = 1
+event_fight = 0 # событие начала боя. Меняет музыку, добавлявет текст "Бой" и др.
+music_turned_on = 1 # Переменная, обозначающая включена ли музыка для более удобной работы с кодом
 # Добавление события начала боя
-event_fight = 0
+
 # Событие меняет фон если установлено значение 1
 # Функция отображения текста
 def draw_text(self, words, screen, pos, size, colour, font_name='arial', centered=False):
@@ -390,6 +390,9 @@ def draw_text(self, words, screen, pos, size, colour, font_name='arial', centere
         pos[1] = pos[1] - text_size[1] // 2
     screen.blit(text, pos)
 
+
+a = 0
+screen_to_draw = pygame.display.set_mode((screen.get_canvas_width() * 2, screen.get_canvas_height() * 2))
 while game_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: # выход
@@ -407,6 +410,14 @@ while game_running:
         elif event.type == pygame.KEYUP:
             engine.rooms.current_room.do_kb_released(event.key)
 
+    if event_fight == 1:
+        print('fight')
+        draw_text(screen, "БОЙ", screen_to_draw, [screen.get_canvas_width(), screen.get_canvas_height() * 2 - 25], 36, (255, 0, 0), "arial", centered=True)
+        pygame.display.flip()
+        if not music_turned_on:
+            pygame.mixer.music.load('fight.mp3')
+            pygame.mixer.music.play()
+            music_turned_on = 1
 
     screen.get_canvas().fill('black')
     engine.rooms.current_room.do_step(screen.get_canvas())
