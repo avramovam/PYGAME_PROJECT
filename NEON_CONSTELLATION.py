@@ -1,6 +1,7 @@
 import pygame
 import engine
-from math import floor, ceil
+from math import floor, ceil, sin, radians
+from typing import Union, Tuple
 
 #region [ИНИЦИАЛИЗАЦИЯ ПРОГРАММЫ]
 print(''':P
@@ -13,8 +14,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #5
-    Daria Stolyarova                                                                              08.01.2022
+    Andrey Avramov                                                                                        #6
+    Daria Stolyarova                                                                              09.01.2022
 ''')
 
 pygame.init()
@@ -29,6 +30,11 @@ del scale, pixelscale
 
 img_bg = pygame.transform.scale(engine.load_image('bg.png'), (screen.get_canvas_width()*1, screen.get_canvas_height()*1))
 img_player_battle = engine.load_image('player_battle.png')
+img_board_enemy0 = engine.load_image('board_enemy0.png')
+img_board_enemy1 = engine.load_image('board_enemy1.png')
+
+sfx_detected = pygame.mixer.Sound('data/sfx_detected.wav')
+sfx_detected.set_volume(0.5)
 
 def UPF(units_per_second):
     '''Сокращение функции engine.speed_upf, которая возвращает скорость "еденицы в кадр",
@@ -36,9 +42,13 @@ def UPF(units_per_second):
        Использовать в ежекадровых функциях где считается время или двигаются объекты.'''
     return engine.speed_upf(units_per_second, FPS)
 
+def sign(x):
+    'Возвращает 1 со знаком числа x. Если x = 0, то возвращает 0.'
+    return (0 if x == 0 else (2*(x > 0))-1)
+
 font_default = pygame.font.Font(None, 24)
 font_small =   pygame.font.Font(None, 18)
-font_heading = pygame.font.Font(None, 48)
+font_heading = pygame.font.SysFont('yugothic', 48, False, False)
 
 def instance_render_text(target):
     '''Рендерит текст для target если есть target.string и target.font.
@@ -199,6 +209,19 @@ def FieldBoard_create(target):
     target.height = ((target.cellsize+1) * target.cellcount_y) + 1
     FieldBoard_user0(target, screen.get_canvas())
     target.boardalpha = 1 # уровень прозрачности от 0 (полностью прозрачный) до 1 (полностью видимый)
+    target.detected = False  # это на случай замечания
+    target.moving_to_battle = 0  # переход - 0..1
+
+
+def FieldBoard_step(target):
+    if target.detected:
+        if target.moving_to_battle >= 1:
+            engine.rooms.change_current_room(room_battle)
+        else:
+            if target.moving_to_battle == 0: # только начал двигаться
+                pygame.mixer.music.stop()
+                sfx_detected.play()
+            target.moving_to_battle += UPF(2) # продвинется за 0.5 секунды
 
 
 def FieldBoard_draw_before(target, surface: pygame.Surface):
@@ -217,6 +240,7 @@ def FieldBoard_draw_before(target, surface: pygame.Surface):
                 else:
                     alpha = max(abs(minimal-px), abs(maximal-px)) / cellsize_with_border
                     alpha = 2 * (alpha - 0.5)
+                # alpha *= max(0, 1-target.moving_to_battle)
                 board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
             elif px % cellsize_with_border == 0:  # линия по горизонтали
                 minimal = floor(py / cellsize_with_border) * cellsize_with_border  # близжайшее верхнее пересечение линий
@@ -227,11 +251,18 @@ def FieldBoard_draw_before(target, surface: pygame.Surface):
                 else:
                     alpha = max(abs(minimal - py), abs(maximal - py)) / cellsize_with_border
                     alpha = 2 * (alpha - 0.5)
+                # alpha *= max(0, 1-target.moving_to_battle)
                 board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
     surface.blit(board_surface, (target.start_x, target.start_y))
 
+def FieldBoard_draw_after(target, surface: pygame.Surface):
+    phase = sin(radians(min(90, 180 * target.moving_to_battle)))
+    draw_text('!', surface, [surface.get_width() // 2, surface.get_height() // 2], round(128 * phase), 'red',
+              'yugothic', True)
 
-EntFieldBoard = engine.Entity(event_create=FieldBoard_create, event_draw_before=FieldBoard_draw_before)
+
+EntFieldBoard = engine.Entity(event_create=FieldBoard_create, event_step=FieldBoard_step,
+                              event_draw_before=FieldBoard_draw_before, event_draw_after=FieldBoard_draw_after)
 #endregion
 #region [FIELD PLAYER]
 def FieldPlayer_create(target):
@@ -286,32 +317,183 @@ def FieldPlayer_draw(target, surface: pygame.Surface):
     #surface.blit(myimage, (target.x, target.y))
 
 def FieldPlayer_kb_pressed(target, buttonid):
-    if buttonid == pygame.K_LEFT:
-        target.cellx = engine.clamp(target.cellx - 1, 0, target.myboard.cellcount_x-1)
-        target.nextcellx = target.cellx - 1
-        target.nextcelly = target.celly
-    elif buttonid == pygame.K_RIGHT:
-        target.cellx = engine.clamp(target.cellx + 1, 0, target.myboard.cellcount_x-1)
-        target.nextcellx = target.cellx + 1
-        target.nextcelly = target.celly
-    elif buttonid == pygame.K_UP:
-        target.celly = engine.clamp(target.celly - 1, 0, target.myboard.cellcount_y-1)
-        target.nextcellx = target.cellx
-        target.nextcelly = target.celly - 1
-    elif buttonid == pygame.K_DOWN:
-        target.celly = engine.clamp(target.celly + 1, 0, target.myboard.cellcount_y-1)
-        target.nextcellx = target.cellx
-        target.nextcelly = target.celly + 1
+    if not target.myboard.detected:
+        if buttonid == pygame.K_LEFT:
+            target.cellx = engine.clamp(target.cellx - 1, 0, target.myboard.cellcount_x-1)
+            target.nextcellx = target.cellx - 1
+            target.nextcelly = target.celly
+        elif buttonid == pygame.K_RIGHT:
+            target.cellx = engine.clamp(target.cellx + 1, 0, target.myboard.cellcount_x-1)
+            target.nextcellx = target.cellx + 1
+            target.nextcelly = target.celly
+        elif buttonid == pygame.K_UP:
+            target.celly = engine.clamp(target.celly - 1, 0, target.myboard.cellcount_y-1)
+            target.nextcellx = target.cellx
+            target.nextcelly = target.celly - 1
+        elif buttonid == pygame.K_DOWN:
+            target.celly = engine.clamp(target.celly + 1, 0, target.myboard.cellcount_y-1)
+            target.nextcellx = target.cellx
+            target.nextcelly = target.celly + 1
 
-EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=FieldPlayer_step, event_draw=FieldPlayer_draw,
-                               event_kb_pressed=FieldPlayer_kb_pressed)
+def FieldPlayer_room_start(target):
+    target.x, target.y = mylastpos_inbattle
+
+def FieldPlayer_room_end(target):
+    global mylastpos_onfield
+    mylastpos_onfield = target.x, target.y
+
+EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=FieldPlayer_step,
+                               event_draw=FieldPlayer_draw,
+                               event_kb_pressed=FieldPlayer_kb_pressed,
+                               event_room_start=FieldPlayer_room_start,
+                               event_room_end=FieldPlayer_room_end)
+#endregion
+#region [FIELD ENEMY]
+def FieldEnemy_detect0(myx, myy, playerx, playery): # тестовый вариант - крест
+    return (myx == playerx) or (myy == playery)
+
+
+def FieldEnemy_create(target):
+    target.image = None
+    target.image_angle = 0
+    target.cellx = 0
+    target.celly = 0
+    target.x = 0
+    target.y = 0
+    target.xto = 0
+    target.yto = 0
+    target.angleto = 0 # к какому углу направляться
+    target.myboard = None
+    target.detect_method = None
+    '''    ^^^^^^^^^^^^^   сие метод обнаружения игрока (присвоить функцию с аргументами myx, myy, playerx, playery
+       которая возвращает bool - обнаруживает ли игрока когда игрок на координатах (playerx;playery) и
+       когда fieldenemy на координатах (myx;myy))'''
+    target.enemyid = 0
+    '''    ^^^^^^^   сие ID вражеского корабля, с которым игрок вступает в бой при обнаружении игрока'''
+    target.pl_ins = None # instance-экземпляр игрока
+
+def FieldEnemy_step(target):
+    if target.myboard is not None:
+        target.xto, target.yto = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly) # получение left-top-края
+        # target.xto += target.myboard.cellsize//2 # xto = середина клетки
+        # target.yto += target.myboard.cellsize//2 # yto = середина клетки
+    ix = engine.interpolate(target.x, target.xto, 2, 0)
+    iy = engine.interpolate(target.y, target.yto, 2, 0)
+
+    if round(target.x, 2) == round(ix, 2): target.x = target.xto
+    else: target.x = ix
+
+    if round(target.y, 2) == round(iy, 2): target.y = target.yto
+    else: target.y = iy
+
+    if (target.myboard is not None) and (target.detect_method is not None) and (target.pl_ins is not None):
+        if target.detect_method(target.cellx, target.celly, target.pl_ins.cellx, target.pl_ins.celly):
+            target.myboard.detected = True # НАС АБНАРУЖИЛИ!!!!!!1
+            enemyid = target.enemyid # НАС ЩАС УБИВАТЬ БУДУТ!!!1
+
+def FieldEnemy_draw(target, surface: pygame.Surface):
+    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
+    mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    # далее подсветка клеток, которые входят в поле обнаружения
+    if (target.myboard is not None) and (target.detect_method is not None):
+        cs = target.myboard.cellsize
+        ox, oy = target.myboard.start_x + 1, target.myboard.start_y + 1
+        for cx in range(target.myboard.cellcount_x):
+            for cy in range(target.myboard.cellcount_y):
+                if target.detect_method(target.cellx, target.celly, cx, cy):
+                    pygame.draw.rect(mysurface, (255,0,0,55), (ox, oy, cs, cs))
+                oy += cs + 1
+            ox += cs + 1
+            oy = target.myboard.start_y + 1
+    surface.blit(mysurface, (0,0))
+
+EntFieldEnemy = engine.Entity(event_create=FieldEnemy_create, event_step=FieldEnemy_step,
+                              event_draw=FieldEnemy_draw)
+#endregion
+#region [BATTLE PLAYER]
+def BattlePlayer_create(target):
+    target.x = 0 # где он щас
+    target.y = 0 # где он щас
+    target.image = img_player_battle
+    # target.image_angle = 0
+    target.keys = {'up': False,
+                   'down': False,
+                   'right': False,
+                   'left': False,
+                   'shoot': False}
+    target.maxspeed = UPF(128)
+    target.friction = target.maxspeed/(UPF(10)**-1) # разгоняется за десятую секунды
+    target.hsp = 0
+    target.vsp = 0
+
+def BattlePlayer_step(target):
+    horizontal_moving = target.keys['right']-target.keys['left']
+    vertical_moving = target.keys['down']-target.keys['up']
+
+    if horizontal_moving == 0:
+        if target.hsp > 0:
+            target.hsp = max(0, target.hsp-target.friction)
+        else:
+            target.hsp = min(0, target.hsp+target.friction)
+    else:
+        target.hsp += horizontal_moving*target.friction
+
+    if vertical_moving == 0:
+        if target.vsp > 0:
+            target.vsp = max(0, target.vsp-target.friction)
+        else:
+            target.vsp = min(0, target.vsp+target.friction)
+    else:
+        target.vsp += vertical_moving*target.friction
+
+    target.hsp = engine.clamp(target.hsp, -target.maxspeed, target.maxspeed)
+    target.vsp = engine.clamp(target.vsp, -target.maxspeed, target.maxspeed)
+
+    target.x += target.hsp
+    target.y += target.vsp
+
+    target.x = engine.clamp(target.x, 8, screen.get_canvas_width() - 32)
+    target.y = engine.clamp(target.y, 8, screen.get_canvas_height() - 32)
+
+def BattlePlayer_draw(target, surface: pygame.Surface):
+    # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
+    surface.blit(target.image, (target.x + target.image.get_width()//2, target.y + target.image.get_height()//2))
+
+def BattlePlayer_kb_pressed(target, buttonid):
+    if buttonid == pygame.K_DOWN: target.keys['down'] = True
+    if buttonid == pygame.K_UP: target.keys['up'] = True
+    if buttonid == pygame.K_LEFT: target.keys['left'] = True
+    if buttonid == pygame.K_RIGHT: target.keys['right'] = True
+
+def BattlePlayer_kb_released(target, buttonid):
+    if buttonid == pygame.K_DOWN: target.keys['down'] = False
+    if buttonid == pygame.K_UP: target.keys['up'] = False
+    if buttonid == pygame.K_LEFT: target.keys['left'] = False
+    if buttonid == pygame.K_RIGHT: target.keys['right'] = False
+
+def BattlePlayer_room_start(target):
+    pygame.mixer.music.load('data/fight.mp3')
+    pygame.mixer.music.play(-1)
+    target.x, target.y = mylastpos_onfield
+
+def BattlePlayer_room_end(target):
+    global mylastpos_inbattle
+    mylastpos_inbattle = target.x, target.y
+
+EntBattlePlayer = engine.Entity(event_create=BattlePlayer_create, event_step=BattlePlayer_step,
+                                event_draw=BattlePlayer_draw,
+                                event_kb_pressed=BattlePlayer_kb_pressed, event_kb_released=BattlePlayer_kb_released,
+                                event_room_start=BattlePlayer_room_start,
+                                event_room_end=BattlePlayer_room_end)
 #endregion
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
 room_mainmenu = engine.Room([EntMainMenuBG, EntMainMenuText, EntMainMenuButton])
 
-room_field = engine.Room([EntFieldBG, EntFieldBoard, EntFieldPlayer])
+room_field = engine.Room([EntFieldBG, EntFieldBoard, EntFieldPlayer, EntFieldEnemy])
+
+room_battle = engine.Room([EntFieldBG, EntBattlePlayer])
 
 engine.rooms.change_current_room(room_mainmenu)
 #endregion
@@ -334,6 +516,22 @@ creators.font = font_small
 creators.text_align = 0
 creators.string = 'Создатели:\nАлексей Кожанов\nАндрей Аврамов\nДарья Столярова'
 instance_render_text(creators)
+
+ourlicense = EntMainMenuText.instance()
+ourlicense.x = screen.get_canvas_width() - 152
+ourlicense.y = screen.get_canvas_height() - 44
+ourlicense.font = font_small
+ourlicense.text_align = 2
+ourlicense.string = 'Лицензия: CC BY-NC 4.0\nДля Яндекс.Лицея, 2021'
+instance_render_text(ourlicense)
+
+controls = EntMainMenuText.instance()
+controls.x = screen.get_canvas_halfwidth()
+controls.y = screen.get_canvas_height() - 80
+controls.font = font_small
+controls.text_align = 1
+controls.string = 'Управление:\nСтрелочки/WASD - движение\nSpace - стрельба\nEsc (удерж.) - выход в главное меню'
+instance_render_text(controls)
 
 mmb1 = EntMainMenuButton.instance()
 mmb1.x = screen.get_canvas_halfwidth()
@@ -364,31 +562,53 @@ bg2.image = img_bg
 
 fplayer = EntFieldPlayer.instance()
 fplayer.myboard = fboard
+
+fenemytest = EntFieldEnemy.instance()
+fenemytest.myboard = fboard
+fenemytest.pl_ins = fplayer
+fenemytest.detect_method = FieldEnemy_detect0
+fenemytest.image = img_board_enemy0
+fenemytest.cellx = fenemytest.celly = 4
+fenemytest.x, fenemytest.y = FieldBoard_get_cell_coords(fboard, 4, 4)
+
+bplayer = EntBattlePlayer.instance()
 #endregion
 
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
-
+mylastpos_onfield = (0, 0) # последнее положение на поле
+mylastpos_inbattle = (0, 0) # последнее положение в бою
+enemyid = 0
 #endregion
 
 #region [ГЛАВНЫЙ ЦИКЛ]
 print('Запуск главного цикла...')
-pygame.mixer.music.load('music.mp3')
-pygame.mixer.music.play()
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.load('data/music.mp3')
+pygame.mixer.music.play(-1)
 game_running = 1
-event_fight = 0 # событие начала боя. Меняет музыку, добавлявет текст "Бой" и др.
-music_turned_on = 1 # Переменная, обозначающая включена ли музыка для более удобной работы с кодом
 # Добавление события начала боя
 
 # Событие меняет фон если установлено значение 1
 # Функция отображения текста
-def draw_text(self, words, screen, pos, size, colour, font_name='arial', centered=False):
-    font = pygame.font.SysFont(font_name, size)
+def draw_text(words, screen, pos, size, colour, font_name='arial', centered=False):
+    if type(font_name) is not pygame.font.Font:
+        font = pygame.font.SysFont(font_name, size)
+    else:
+        font = font_name
     text = font.render(words, False, colour)
     text_size = text.get_size()
     if centered:
         pos[0] = pos[0] - text_size[0] // 2
         pos[1] = pos[1] - text_size[1] // 2
     screen.blit(text, pos)
+
+def paint_surface(surface: pygame.Surface,
+                  color: Union[Tuple[int, int, int], Tuple[int, int, int, int], pygame.Color],
+                  method: int):
+    '''Красит pygame.Surface по определенному методу pygame.'''
+    ns = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    ns.fill(color)
+    surface.blit(ns, (0, 0), None, method)
 
 
 a = 0
@@ -409,15 +629,6 @@ while game_running:
             engine.rooms.current_room.do_kb_pressed(event.key)
         elif event.type == pygame.KEYUP:
             engine.rooms.current_room.do_kb_released(event.key)
-
-    if event_fight == 1:
-        print('fight')
-        draw_text(screen, "БОЙ", screen_to_draw, [screen.get_canvas_width(), screen.get_canvas_height() * 2 - 25], 36, (255, 0, 0), "arial", centered=True)
-        pygame.display.flip()
-        if not music_turned_on:
-            pygame.mixer.music.load('fight.mp3')
-            pygame.mixer.music.play()
-            music_turned_on = 1
 
     screen.get_canvas().fill('black')
     engine.rooms.current_room.do_step(screen.get_canvas())
