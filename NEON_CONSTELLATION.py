@@ -14,8 +14,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #6
-    Daria Stolyarova                                                                              09.01.2022
+    Andrey Avramov                                                                                        #7
+    Daria Stolyarova                                                                              10.01.2022
 ''')
 
 pygame.init()
@@ -64,15 +64,9 @@ def MainMenuBG_create(target):
     target.image = None
     target.angle = 0
     target.offset = 8
-    target.gotofield = 0
-    target.gotofield_step = 0
 
 def MainMenuBG_step(target):
     target.angle = (target.angle+UPF(30)) % 360
-    if target.gotofield:
-        target.gotofield_step += UPF(1/2) # полный переход за 2 секунды
-    if target.gotofield_step >= 1:
-        engine.rooms.change_current_room(room_field)
 
 def MainMenuBG_draw_before(target, surface: pygame.Surface):
     #pygame.draw.circle(surface, 'yellow', (2, 2), 5.0)
@@ -85,20 +79,8 @@ def MainMenuBG_draw_before(target, surface: pygame.Surface):
             surface.blit(target.image, (ox + (x * width),  # - леша
                                         oy + (y * height)))
 
-def MainMenuBG_draw_after(target, surface: pygame.Surface):
-    '''Здесь будет рисоваться типо круг перехода из уровня в уровень'''
-    width = surface.get_width()
-    height = surface.get_height()
-    half_diagonal = (((width**2) + (height**2))**0.5) / 2
-    circle_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-    circle_surface2 = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-    circle_surface.fill('black')
-    pygame.draw.circle(circle_surface2, 'black', (width/2, height/2), half_diagonal * (max(0, 1.4*(1 - target.gotofield_step) - 0.4)), 0)
-    circle_surface.blit(circle_surface2, (0, 0), None, pygame.BLEND_RGBA_SUB)
-    surface.blit(circle_surface, (0, 0), None)
-
 EntMainMenuBG = engine.Entity(event_create=MainMenuBG_create, event_step=MainMenuBG_step,
-                              event_draw_before=MainMenuBG_draw_before, event_draw_after=MainMenuBG_draw_after)
+                              event_draw_before=MainMenuBG_draw_before)
 #endregion
 #region [MAINMENU TEXT]
 def MainMenuText_create(target):
@@ -128,7 +110,7 @@ EntMainMenuText = engine.Entity(event_create=MainMenuText_create, event_draw=Mai
 #endregion
 #region [MAINMENU BUTTON]
 def MainMenuButton_user0(): # Переход на поле
-    bg1.gotofield = 1
+    instr.show = 1
 
 def MainMenuButton_user2(): # Выход
     global game_running
@@ -149,9 +131,8 @@ def MainMenuButton_draw(target, surface: pygame.Surface):
     rect_coords = (target.x - ((tw+fs)//2), target.y - ((th+fs)//2), tw+fs, th+fs)
     text_coords = (target.x - (tw//2),      target.y - (th//2))
     rounding = 4 # величина скругления задника
-    full_rounding = (rounding, rounding, rounding, rounding) # для всех углов
-    pygame.draw.rect(surface, 'white', rect_coords, 0, *full_rounding) # задник
-    pygame.draw.rect(surface, 'gray',  rect_coords, 3, *full_rounding) # обводка задника
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding) # задник
+    pygame.draw.rect(surface, 'gray',  rect_coords, 3, rounding) # обводка задника
     surface.blit(target.text[0], text_coords)
 
 def MainMenuButton_mouse_pressed(target, mousepos, buttonid):
@@ -167,6 +148,159 @@ def MainMenuButton_mouse_pressed(target, mousepos, buttonid):
 # EntMainMenuButton копирует метод создания и рендера текста из EntGameTitle
 EntMainMenuButton = engine.Entity(event_create=MainMenuButton_create, event_draw=MainMenuButton_draw,
                                   event_mouse_pressed=MainMenuButton_mouse_pressed)
+#endregion
+#region [MAINMENU INSTRUCTIONS]
+def MainMenuInstr_create(target):
+    target.show = 0
+    target.show_step = 0
+    target.gotofield = 0
+    target.gotofield_step = 0
+    target.image = None
+    target.image = pygame.Surface((600, 150), pygame.SRCALPHA)
+    target.image.fill('purple')
+
+    target.mybutton_x1, target.mybutton_y = 0, 0
+    target.font = font_default
+    target.string1 = 'Поехали!'
+    target.text_color = 'black'
+
+    target.mybutton_x2, target.mybutton_y = 0, 0
+    target.font = font_default
+    target.string2 = 'Я не готов'
+    target.text_color = 'black'
+
+    target.text1 = target.font.render(target.string1, True, target.text_color)
+    target.text2 = target.font.render(target.string2, True, target.text_color)
+
+    target.font = font_small
+    target.text_color = 'white'
+    target.i_strings = ['Инструкция',
+                                  ['Вы - космический пират,',
+                                   'и ваш путь идет через',
+                                   'космическое поле.',
+                                   'Избегайте военные',
+                                   'корабли, иначе вы',
+                                   'вступите с ними в бой.'],
+                                  ['Ваша задача - достичь',
+                                   'торговый корабль',
+                                   '"Небесный" чтобы',
+                                   'ограбить его! После',
+                                   'ограбления, следуйте',
+                                   'в пункт сверхзвуковой',
+                                   'переброски, чтобы',
+                                   'продвинуться на',
+                                   'следующий уровень.'],
+                                  ['В бою вам необходимо',
+                                   'избегать вражеские',
+                                   'пули и самому',
+                                   'атаковать врага.',
+                                   'Ваш корабль стреляет',
+                                   'по вражескому',
+                                   'автоматически, пока он',
+                                   'напротив него.'],
+                                  ['Во время сверхзвуковой',
+                                   'переброски у вас есть',
+                                   'время чтобы купить',
+                                   'улучшения для вашего',
+                                   'корабля.']]
+
+    target.instructions = [font_default.render(target.i_strings[0], True, target.text_color), [], [], [], []]
+    for i in range(1, len(target.i_strings)):
+        for j in range(len(target.i_strings[i])):
+            target.instructions[i].append(target.font.render(target.i_strings[i][j], True, target.text_color))
+
+def MainMenuInstr_step(target):
+    if target.show:
+        target.show_step = engine.clamp(target.show_step+UPF(1), 0, 1)
+    else:
+        target.show_step = engine.clamp(target.show_step-UPF(1), 0, 1)
+
+    if target.gotofield:
+        target.gotofield_step += UPF(1/2) # полный переход за 2 секунды
+    if target.gotofield_step >= 1:
+        engine.rooms.change_current_room(room_field)
+
+def MainMenuInstr_draw_after(target, surface: pygame.Surface):
+    width = surface.get_width()
+    height = surface.get_height()
+
+    showphase = sin(radians(target.show_step * 90))
+
+    # ЗАТЕНЕНИЕ
+    faded = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    faded.fill((0,0,0,255 * showphase * 0.65))
+    surface.blit(faded, (0,0))
+
+    # ИНСТРУКЦИЯ
+    if target.image is not None:
+        image_width = target.image.get_width()
+        image_height = target.image.get_height()
+        surface.blit(target.image, (width//2 - image_width//2, height//2 - image_height//2 + 512 - 576*showphase))
+        #pygame.draw.rect(surface, 'purple', (surface.get_width()//2 - 200))
+
+        # ТЕКСТ
+        tw = target.instructions[0].get_width()
+        th = target.instructions[0].get_height()
+        surface.blit(target.instructions[0], (width//2 - tw//2, 16 + 512 - 512*showphase))
+        for x in range(1, len(target.instructions)):
+            xoffset = width//2 + (x-2.5)*160
+            for y in range(len(target.instructions[x])):
+                yoffset = height//2 + image_height//2 - 48 + (y*14) + 512 - 512*showphase
+                tw = target.instructions[x][y].get_width()
+                th = target.instructions[x][y].get_height()
+                surface.blit(target.instructions[x][y], (xoffset - tw//2, yoffset - th//2))
+
+    # КНОПКИ
+    target.mybutton_x1 = width//2 - 256
+    target.mybutton_x2 = width//2 + 256
+    target.mybutton_y = height - 32 + 160 - 160*showphase
+
+    tw = target.text1.get_width()
+    th = target.text1.get_height()
+    fs = 16  # размер поля между прямоугольником и текстом
+    rect_coords = (target.mybutton_x1 - ((tw + fs) // 2), target.mybutton_y - ((th + fs) // 2), tw + fs, th + fs)
+    text_coords = (target.mybutton_x1 - (tw // 2), target.mybutton_y - (th // 2))
+    rounding = 4  # величина скругления задника
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text1, text_coords)
+
+    tw = target.text2.get_width()
+    th = target.text2.get_height()
+    rect_coords = (target.mybutton_x2 - ((tw + fs) // 2), target.mybutton_y - ((th + fs) // 2), tw + fs, th + fs)
+    text_coords = (target.mybutton_x2 - (tw // 2), target.mybutton_y - (th // 2))
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text2, text_coords)
+
+    # КРУГ
+    half_diagonal = (((width ** 2) + (height ** 2)) ** 0.5) / 2
+    circle_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface2 = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface.fill('black')
+    pygame.draw.circle(circle_surface2, 'black', (width / 2, height / 2),
+                       half_diagonal * (max(0, 1.4 * (1 - target.gotofield_step) - 0.4)), 0)
+    circle_surface.blit(circle_surface2, (0, 0), None, pygame.BLEND_RGBA_SUB)
+    surface.blit(circle_surface, (0, 0), None)
+
+def MainMenuInstr_mouse_pressed(target, mousepos, buttonid):
+    tw1 = target.text1.get_width()
+    th1 = target.text1.get_height()
+    tw2 = target.text2.get_width()
+    th2 = target.text2.get_height()
+    fs = 16  # размер поля между прямоугольником и текстом
+    xrange1 = target.mybutton_x1 - ((tw1 + fs) // 2) <= mousepos[0] <= target.mybutton_x1 + ((tw1 + fs) // 2)
+    xrange2 = target.mybutton_x2 - ((tw2 + fs) // 2) <= mousepos[0] <= target.mybutton_x2 + ((tw2 + fs) // 2)
+    yrange1 = target.mybutton_y - ((th1 + fs) // 2) <= mousepos[1] <= target.mybutton_y + ((th1 + fs) // 2)
+    yrange2 = target.mybutton_y - ((th2 + fs) // 2) <= mousepos[1] <= target.mybutton_y + ((th2 + fs) // 2)
+    if xrange1 and yrange1:
+        target.gotofield = 1
+    if xrange2 and yrange2:
+        target.show = 0
+
+EntMainMenuInstr = engine.Entity(event_create=MainMenuInstr_create, event_step=MainMenuInstr_step,
+                                 event_draw_after=MainMenuInstr_draw_after,
+                                 event_mouse_pressed=MainMenuInstr_mouse_pressed)
 #endregion
 #region [FIELD BG]
 def FieldBG_create(target):
@@ -336,11 +470,15 @@ def FieldPlayer_kb_pressed(target, buttonid):
             target.nextcelly = target.celly + 1
 
 def FieldPlayer_room_start(target):
+    pygame.mixer.music.load('data/onfield.mp3')
+    pygame.mixer.music.play(-1)
     target.x, target.y = mylastpos_inbattle
+    target.image_angle = mylastrot_inbattle
 
 def FieldPlayer_room_end(target):
-    global mylastpos_onfield
+    global mylastpos_onfield, mylastrot_onfield
     mylastpos_onfield = target.x, target.y
+    mylastrot_onfield = target.image_angle
 
 EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=FieldPlayer_step,
                                event_draw=FieldPlayer_draw,
@@ -455,9 +593,12 @@ def BattlePlayer_step(target):
     target.x = engine.clamp(target.x, 8, screen.get_canvas_width() - 32)
     target.y = engine.clamp(target.y, 8, screen.get_canvas_height() - 32)
 
+    target.image_angle //= 2
+
 def BattlePlayer_draw(target, surface: pygame.Surface):
     # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
-    surface.blit(target.image, (target.x + target.image.get_width()//2, target.y + target.image.get_height()//2))
+    myimage = pygame.transform.rotate(target.image, target.image_angle)
+    surface.blit(myimage, (target.x + target.image.get_width()//2, target.y + target.image.get_height()//2))
 
 def BattlePlayer_kb_pressed(target, buttonid):
     if buttonid == pygame.K_DOWN: target.keys['down'] = True
@@ -475,10 +616,12 @@ def BattlePlayer_room_start(target):
     pygame.mixer.music.load('data/fight.mp3')
     pygame.mixer.music.play(-1)
     target.x, target.y = mylastpos_onfield
+    target.image_angle = mylastrot_onfield
 
 def BattlePlayer_room_end(target):
-    global mylastpos_inbattle
+    global mylastpos_inbattle, mylastrot_inbattle
     mylastpos_inbattle = target.x, target.y
+    mylastrot_inbattle = target.image_angle
 
 EntBattlePlayer = engine.Entity(event_create=BattlePlayer_create, event_step=BattlePlayer_step,
                                 event_draw=BattlePlayer_draw,
@@ -489,7 +632,7 @@ EntBattlePlayer = engine.Entity(event_create=BattlePlayer_create, event_step=Bat
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
-room_mainmenu = engine.Room([EntMainMenuBG, EntMainMenuText, EntMainMenuButton])
+room_mainmenu = engine.Room([EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
 
 room_field = engine.Room([EntFieldBG, EntFieldBoard, EntFieldPlayer, EntFieldEnemy])
 
@@ -530,8 +673,11 @@ controls.x = screen.get_canvas_halfwidth()
 controls.y = screen.get_canvas_height() - 80
 controls.font = font_small
 controls.text_align = 1
-controls.string = 'Управление:\nСтрелочки/WASD - движение\nSpace - стрельба\nEsc (удерж.) - выход в главное меню'
+#controls.string = 'Управление:\nСтрелочки/WASD - движение\nSpace - способность\nEsc (удерж.) - выход в главное меню'
+controls.string = 'Управление:\nСтрелочки/WASD - движение\nEsc (удерж.) - выход в главное меню'
 instance_render_text(controls)
+
+instr = EntMainMenuInstr.instance()
 
 mmb1 = EntMainMenuButton.instance()
 mmb1.x = screen.get_canvas_halfwidth()
@@ -577,13 +723,15 @@ bplayer = EntBattlePlayer.instance()
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
 mylastpos_onfield = (0, 0) # последнее положение на поле
 mylastpos_inbattle = (0, 0) # последнее положение в бою
+mylastrot_onfield = 0
+mylastrot_inbattle = 0
 enemyid = 0
 #endregion
 
 #region [ГЛАВНЫЙ ЦИКЛ]
 print('Запуск главного цикла...')
 pygame.mixer.music.set_volume(0.5)
-pygame.mixer.music.load('data/music.mp3')
+pygame.mixer.music.load('data/mainmenu.mp3')
 pygame.mixer.music.play(-1)
 game_running = 1
 # Добавление события начала боя
