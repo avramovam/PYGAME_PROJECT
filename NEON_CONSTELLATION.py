@@ -787,7 +787,8 @@ def BattleEnemy_room_start(target):
     target.hp = target.maxhp // 2
 
 EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=BattleEnemy_step,
-                               event_draw=BattleEnemy_draw, event_draw_after=BattleEnemy_draw_after)
+                               event_draw=BattleEnemy_draw, event_draw_after=BattleEnemy_draw_after,
+                               event_room_start=BattleEnemy_room_start)
 #endregion
 #region [BATTLE EN BULLET]
 EntBattleEnBullet = engine.Entity()
