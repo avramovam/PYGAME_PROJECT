@@ -724,15 +724,22 @@ def BattlePlBullet_step(target):
         del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)] # самоуничтожение
 
 def BattlePlBullet_step_after(target):
-    if target.mask.overlap(benemy.mask, (target.x - benemy.x - benemy.image.get_width()//2, target.y - benemy.y)): # попал в противника
-        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+    if target in EntBattlePlBullet.instances:
+        if target.mask.overlap(benemy.mask, (
+        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)):  # попал в противника
+            del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
 
 def BattlePlBullet_draw(target, surface: pygame.Surface):
     surface.blit(target.image, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
 
+def BattlePlBullet_room_end(target):
+    if target in EntBattlePlBullet.instances:
+        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+
 EntBattlePlBullet = engine.Entity(event_create=BattlePlBullet_create,
                                   event_step=BattlePlBullet_step, event_step_after=BattlePlBullet_step_after,
-                                  event_draw=BattlePlBullet_draw)
+                                  event_draw=BattlePlBullet_draw,
+                                  event_room_end=BattlePlBullet_room_end)
 #endregion
 #region [BATTLE ENEMY]
 def BattleEnemy_create(target):
