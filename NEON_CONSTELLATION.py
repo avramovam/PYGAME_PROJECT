@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #7
-    Daria Stolyarova                                                                              10.01.2022
+    Andrey Avramov                                                                                        #8
+    Daria Stolyarova                                                                              11.01.2022
 ''')
 
 pygame.init()
