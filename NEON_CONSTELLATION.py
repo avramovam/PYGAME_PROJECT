@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #8
-    Daria Stolyarova                                                                              11.01.2022
+    Andrey Avramov                                                                                        #9
+    Daria Stolyarova                                                                              16.01.2022
 ''')
 
 pygame.init()
@@ -40,6 +40,9 @@ img_boss = engine.load_image('boss.png')
 mask_boss = pygame.mask.from_surface(img_boss)
 img_enemy0_idle = engine.load_image('enemy0_idle.png')
 mask_enemy0 = pygame.mask.from_surface(img_enemy0_idle)
+img_instructions = engine.load_image('instructions.png')
+img_objective = engine.load_image('objective.png')
+img_portal = engine.load_image('portal.png')
 
 sfx_detected = pygame.mixer.Sound('data/sfx_detected.wav')
 sfx_detected.set_volume(0.5)
@@ -67,6 +70,41 @@ def instance_render_text(target):
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ENTITY]
+#region [GLOBAL CHEATS]
+def GlobalCheats_create(target):
+    target.keys = {pygame.K_LALT: False,
+                   pygame.K_RALT: False}
+
+def GlobalCheats_draw_after(target, surface: pygame.Surface):
+    if cheats_enabled:
+        draw_text('ЧИТЫ ВКЛЮЧЕНЫ', surface,
+                  (4, 4),
+                  8, 'white',
+                  centered=False)
+    if cheats_nodetect:
+        draw_text('NODETECT', surface,
+                  (4, 4+10),
+                  8, 'white',
+                  centered=False)
+
+def GlobalCheats_kb_pressed(target, buttonid):
+    global cheats_nodetect, cheats_enabled
+    target.keys[buttonid] = True
+    if target.keys[pygame.K_LALT] or target.keys[pygame.K_RALT]:
+        if buttonid == pygame.K_RETURN: # вкл/выкл читы
+            cheats_enabled = not cheats_enabled
+        if cheats_enabled: # остальное пока читы включены
+            if buttonid == pygame.K_n: # незаметность
+                cheats_nodetect = not cheats_nodetect
+
+def GlobalCheats_kb_released(target, buttonid):
+    target.keys[buttonid] = False
+
+EntGlobalCheats = engine.Entity(event_create=GlobalCheats_create,
+                                event_draw_after=GlobalCheats_draw_after,
+                                event_kb_pressed=GlobalCheats_kb_pressed,
+                                event_kb_released=GlobalCheats_kb_released)
+#endregion
 #region [MAINMENU BG]
 def MainMenuBG_create(target):
     target.image = None
@@ -163,9 +201,9 @@ def MainMenuInstr_create(target):
     target.show_step = 0
     target.gotofield = 0
     target.gotofield_step = 0
-    target.image = None
-    target.image = pygame.Surface((600, 150), pygame.SRCALPHA)
-    target.image.fill('purple')
+    target.image = img_instructions
+    # target.image = pygame.Surface((600, 150), pygame.SRCALPHA)
+    # target.image.fill('purple')
 
     target.mybutton_x1, target.mybutton_y = 0, 0
     target.font = font_default
@@ -352,20 +390,29 @@ def FieldBoard_user0(target, surface: pygame.Surface):
     target.start_x = surface_center_x - (target.width//2)
     target.start_y = surface_center_y - (target.height//2)
 
-def FieldBoard_init_level(target):
-    ucfe = [] # unused_coords_for_enemies
+def FieldBoard_init_level(target): # расположение штук на поле
+    ucfe = [] # unused_coords_for_enemies - координаты всем и всям уникальные
     for x in range(0, target.cellcount_x):
         for y in range(4, target.cellcount_y-3):
             ucfe.append((x, y))
     # создать 5 противников
-    for j in range(5):
+    for j in range(2):
         i = EntFieldEnemy.instance()
         i.cellx, i.celly = ucfe.pop(randint(0, len(ucfe)-1))
-        i.enemyid = randint(1, 4)
+        i.enemyid = 0
         i.pl_ins = fplayer
         i.detect_method = (FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0)[i.enemyid-1]
         i.image = (img_board_enemy0, img_board_enemy0, img_board_enemy0, img_board_enemy0)[i.enemyid-1]
         i.myboard = target
+    # создать босса
+    i = EntFieldBoss.instance()
+    i.cellx, i.celly = randint(0, target.cellcount_x-1), randint(0, 3)
+    i.pl_ins = fplayer
+    i.myboard = target
+    # создать портал
+    i = EntFieldPortal.instance()
+    i.cellx, i.celly = randint(0, target.cellcount_x-1), randint(target.cellcount_y-1-2, target.cellcount_y-1)
+    i.myboard = target
     # переместить игрока
     fplayer.cellx = randint(0, target.cellcount_x-1)
     fplayer.celly = randint(target.cellcount_y-1-2, target.cellcount_y-1)
@@ -379,9 +426,39 @@ def FieldBoard_create(target):
     target.width = ((target.cellsize+1) * target.cellcount_x) + 1
     target.height = ((target.cellsize+1) * target.cellcount_y) + 1
     FieldBoard_user0(target, screen.get_canvas())
-    target.boardalpha = 1 # уровень прозрачности от 0 (полностью прозрачный) до 1 (полностью видимый)
+    target.boardalpha = 0.6 # уровень прозрачности от 0 (полностью прозрачный) до 1 (полностью видимый)
     target.detected = False  # это на случай замечания
     target.moving_to_battle = 0  # переход - 0..1
+
+    target.board_surface = pygame.Surface((target.width, target.height), pygame.SRCALPHA)
+    target.board_surface.fill((0, 0, 0, 0))
+    # попиксельное отрисовывание сетки хехехехехехехехехе ужас
+    cellsize_with_border = target.cellsize + 1
+    for px in range(target.width):
+        for py in range(target.height):
+            if py % cellsize_with_border == 0:  # линия по горизонтали
+                minimal = floor(px / cellsize_with_border) * cellsize_with_border  # близжайшее левое пересечение линий
+                maximal = ceil(px / cellsize_with_border) * cellsize_with_border  # близжайшее правое пересечение линий
+
+                if minimal == maximal:  # мы находимся на пересечении
+                    alpha = 1
+                else:
+                    alpha = max(abs(minimal - px), abs(maximal - px)) / cellsize_with_border
+                    alpha = 2 * (alpha - 0.5)
+                # alpha *= max(0, 1-target.moving_to_battle)
+                target.board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
+            elif px % cellsize_with_border == 0:  # линия по горизонтали
+                minimal = floor(
+                    py / cellsize_with_border) * cellsize_with_border  # близжайшее верхнее пересечение линий
+                maximal = ceil(py / cellsize_with_border) * cellsize_with_border  # близжайшее нижнее пересечение линий
+
+                if minimal == maximal:  # мы находимся на пересечении
+                    alpha = 1
+                else:
+                    alpha = max(abs(minimal - py), abs(maximal - py)) / cellsize_with_border
+                    alpha = 2 * (alpha - 0.5)
+                # alpha *= max(0, 1-target.moving_to_battle)
+                target.board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
 
 
 def FieldBoard_step(target):
@@ -396,35 +473,7 @@ def FieldBoard_step(target):
 
 
 def FieldBoard_draw_before(target, surface: pygame.Surface):
-    board_surface = pygame.Surface((target.width, target.height), pygame.SRCALPHA)
-    board_surface.fill((0,0,0,0))
-    # попиксельное отрисовывание сетки хехехехехехехехехе ужас
-    cellsize_with_border = target.cellsize + 1
-    for px in range(target.width):
-        for py in range(target.height):
-            if py % cellsize_with_border == 0: # линия по горизонтали
-                minimal = floor(px / cellsize_with_border) * cellsize_with_border # близжайшее левое пересечение линий
-                maximal = ceil(px / cellsize_with_border) * cellsize_with_border # близжайшее правое пересечение линий
-
-                if minimal == maximal: # мы находимся на пересечении
-                    alpha = 1
-                else:
-                    alpha = max(abs(minimal-px), abs(maximal-px)) / cellsize_with_border
-                    alpha = 2 * (alpha - 0.5)
-                # alpha *= max(0, 1-target.moving_to_battle)
-                board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
-            elif px % cellsize_with_border == 0:  # линия по горизонтали
-                minimal = floor(py / cellsize_with_border) * cellsize_with_border  # близжайшее верхнее пересечение линий
-                maximal = ceil(py / cellsize_with_border) * cellsize_with_border  # близжайшее нижнее пересечение линий
-
-                if minimal == maximal:  # мы находимся на пересечении
-                    alpha = 1
-                else:
-                    alpha = max(abs(minimal - py), abs(maximal - py)) / cellsize_with_border
-                    alpha = 2 * (alpha - 0.5)
-                # alpha *= max(0, 1-target.moving_to_battle)
-                board_surface.set_at((px, py), (255, 255, 255, 255 * alpha * target.boardalpha))
-    surface.blit(board_surface, (target.start_x, target.start_y))
+    surface.blit(target.board_surface, (target.start_x, target.start_y))
 
 def FieldBoard_draw_after(target, surface: pygame.Surface):
     phase = sin(radians(min(90, 180 * target.moving_to_battle)))
@@ -547,12 +596,12 @@ def FieldEnemy_create(target):
     '''    ^^^^^^^^^^^^^   сие метод обнаружения игрока (присвоить функцию с аргументами myx, myy, playerx, playery
        которая возвращает bool - обнаруживает ли игрока когда игрок на координатах (playerx;playery) и
        когда fieldenemy на координатах (myx;myy))'''
-    target.enemyid = 0
+    target.enemyid = 1
     '''    ^^^^^^^   сие ID вражеского корабля, с которым игрок вступает в бой при обнаружении игрока'''
     target.pl_ins = None # instance-экземпляр игрока
 
 def FieldEnemy_step(target):
-    global whodetected
+    global whodetected, enemyid
     if target.myboard is not None:
         target.xto, target.yto = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly) # получение left-top-края
         # target.xto += target.myboard.cellsize//2 # xto = середина клетки
@@ -567,7 +616,7 @@ def FieldEnemy_step(target):
     else: target.y = iy
 
     if (target.myboard is not None) and (target.myboard.detected != True) and \
-       (target.detect_method is not None) and (target.pl_ins is not None):
+       (target.detect_method is not None) and (target.pl_ins is not None) and (not cheats_nodetect):
         if target.detect_method(target.cellx, target.celly, target.pl_ins.cellx, target.pl_ins.celly):
             target.myboard.detected = True # НАС АБНАРУЖИЛИ!!!!!!1
             enemyid = target.enemyid # НАС ЩАС УБИВАТЬ БУДУТ!!!1
@@ -595,6 +644,78 @@ def FieldEnemy_room_start(target):
 
 EntFieldEnemy = engine.Entity(event_create=FieldEnemy_create, event_step=FieldEnemy_step,
                               event_draw=FieldEnemy_draw, event_room_start=FieldEnemy_room_start)
+#endregion
+#region [FIELD BOSS]
+def FieldBoss_create(target):
+    target.image = img_objective
+    target.image_angle = 0
+    target.cellx = 0
+    target.celly = 0
+    target.x = 0
+    target.y = 0
+    target.angleto = 0 # к какому углу направляться
+    target.myboard = None
+    target.pl_ins = None # instance-экземпляр игрока
+
+def FieldBoss_step(target):
+    global whodetected, enemyid
+    if target.myboard is not None:
+        target.x, target.y = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly) # получение left-top-края
+
+    if (target.myboard is not None) and (target.myboard.detected != True) and (target.pl_ins is not None):
+        if (target.cellx == target.pl_ins.cellx) and (target.celly == target.pl_ins.celly):
+            target.myboard.detected = True # НАС АБНАРУЖИЛИ!!!!!!1
+            enemyid = 5 # НАС ЩАС УБИВАТЬ БУДУТ!!!1
+            whodetected = target
+
+def FieldBoss_draw(target, surface: pygame.Surface):
+    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
+    mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    # далее подсветка клеток, которые входят в поле обнаружения
+    if (target.myboard is not None):
+        cs = target.myboard.cellsize
+        ox, oy = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly)
+        # ox = target.myboard.get_cell_coords(target.cellx, target.celly)
+        pygame.draw.rect(mysurface, (255,155,0,55), (ox + 1, oy + 1, cs, cs))
+    surface.blit(mysurface, (0,0))
+
+def FieldBoss_room_start(target):
+    if whodetected == target:
+        del EntFieldBoss.instances[EntFieldBoss.instances.index(target)]  # самоуничтожение
+
+EntFieldBoss = engine.Entity(event_create=FieldBoss_create, event_step=FieldBoss_step,
+                              event_draw=FieldBoss_draw, event_room_start=FieldBoss_room_start)
+#endregion
+#region [FIELD PORTAL]
+def FieldPortal_create(target):
+    target.image = img_portal
+    target.image_alpha = target.image.copy()
+    paint_surface(target.image_alpha, (255, 255, 255, int(0.3*255)), pygame.BLEND_RGBA_MULT) # прозрачный вариант
+    target.image_angle = 0
+    target.cellx = 0
+    target.celly = 0
+    target.myboard = None
+    target.pl_ins = None # instance-экземпляр игрока
+
+def FieldPortal_step(target):
+    if killedboss: # активизируется только в случае если босс убит
+        pass
+    target.image_angle = (target.image_angle + UPF(45)) % 360 # крутится на 45 градусов каждую секунду
+
+def FieldPortal_draw(target, surface: pygame.Surface):
+    myimage = pygame.transform.rotate(target.image if killedboss else target.image_alpha, target.image_angle)
+    myimage_width = myimage.get_width()
+    myimage_height = myimage.get_height()
+    deltawidth = myimage_width - target.myboard.cellsize
+    deltaheight = myimage_height - target.myboard.cellsize
+    ox, oy = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly)
+    surface.blit(myimage,
+                 (ox - deltawidth // 2 + 1,
+                  oy - deltaheight // 2 + 1))
+
+EntFieldPortal = engine.Entity(event_create=FieldPortal_create,
+                               event_step=FieldPortal_step,
+                               event_draw=FieldPortal_draw)
 #endregion
 #region [BATTLE PLAYER]
 def BattlePlayer_create(target):
@@ -690,6 +811,10 @@ def BattlePlayer_kb_released(target, buttonid):
     if buttonid == pygame.K_RIGHT: target.keys['right'] = False
 
 def BattlePlayer_room_start(target):
+    target.keys = {'up': False,
+                   'down': False,
+                   'right': False,
+                   'left': False} # на всякий сбрашиваем клавишы
     pygame.mixer.music.load('data/fight.mp3')
     pygame.mixer.music.play(-1)
     target.x, target.y = mylastpos_onfield
@@ -759,6 +884,7 @@ def BattleEnemy_create(target):
     instance_render_text(target)
 
 def BattleEnemy_step(target):
+    global killedboss
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
 
     target.x = screen.get_canvas_halfwidth() + 128 * sin(radians(target.posphase))
@@ -771,6 +897,8 @@ def BattleEnemy_step(target):
             target.hp -= bulletdamage
 
     if target.hp <= 0:
+        if enemyid == 5: # был босс
+            killedboss = True
         engine.rooms.change_current_room(room_field)
 
 def BattleEnemy_draw(target, surface: pygame.Surface):
@@ -790,6 +918,16 @@ def BattleEnemy_draw_after(target, surface: pygame.Surface):
     surface.blit(mysurface, (0, 0))
 
 def BattleEnemy_room_start(target):
+    print(enemyid)
+    if enemyid == 5: # босс / Небесный
+        target.image = img_boss
+        target.mask = mask_boss
+    elif enemyid == 0: # синий
+        target.image = img_enemy0_idle
+        target.mask = mask_enemy0
+    target.string = enemyname[enemyid]
+    instance_render_text(target)
+
     target.maxhp = 100
     target.hp = target.maxhp // 2
 
@@ -803,16 +941,20 @@ EntBattleEnBullet = engine.Entity()
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
-room_mainmenu = engine.Room([EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
+room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
 
-room_field = engine.Room([EntFieldBG, EntFieldBoard, EntFieldPlayer, EntFieldEnemy])
+room_field = engine.Room([EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy, EntFieldBoss,
+                          EntFieldPlayer])
 
-room_battle = engine.Room([EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleEnemy, EntBattleEnBullet])
+room_battle = engine.Room([EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleEnemy,
+                           EntBattleEnBullet])
 
 engine.rooms.change_current_room(room_mainmenu)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
+cheats = EntGlobalCheats.instance()
+
 bg1 = EntMainMenuBG.instance()
 bg1.image = img_bg
 
@@ -911,7 +1053,11 @@ shootspeed = 1
 bulletspeed = 2
 
 enemyid = 0
-enemyname = ['BFG-ZBS M33 "Небесный"', 'MIM Lighter 5', 'KLICH-Sh Shadow', 'ULTIMATA VII', 'Mnvr K5', 'VSTK SiegeEye \'88']
+enemyname = ['MIM Lighter 5', 'KLICH-Sh Shadow', 'ULTIMATA VII', 'Mnvr K5', 'VSTK SiegeEye \'88', 'BFG-ZBS M33 "Небесный"']
+killedboss = False
+
+cheats_enabled = False # читы для разработчика
+cheats_nodetect = False # никто не замечает игрока
 #endregion
 
 #region [ГЛАВНЫЙ ЦИКЛ]
