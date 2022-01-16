@@ -2,7 +2,7 @@ import os
 import sys
 
 from typing import List, Tuple, Union
-from math import sin, cos, radians, degrees, floor, ceil, atan2
+from math import sin, cos, radians, degrees, floor, ceil, acos, atan2
 
 import pygame
 
@@ -84,17 +84,21 @@ def point_direction(x1, y1, x2, y2):
     # numerator = (x*1) + (y*0)                         |
     # denominator = hypotenuse(x, y) * hypotenuse(1, 0) |
     # cosinus = numerator/denominator                   V далее сокращенный вариант
-    # denominator = hypotenuse(x, y)            |
-    # if denominator != 0:                      |
-    #     cosinus = x/denominator               |
-    #     if y <= 0:                            |
-    #         return degrees(acos(cosinus))     |
-    #     else:                                 |
-    #         return 360-degrees(acos(cosinus)) |
-    # else:                                     |
-    #     return 0                              V еще проще вариант
+    # denominator = hypotenuse(x, y)
+    # if denominator != 0:
+    #     cosinus = x/denominator
+    #     if y <= 0:
+    #         return degrees(acos(cosinus))
+    #     else:
+    #         return 360-degrees(acos(cosinus))
+    # else:
+    #     return 0
 
-    return degrees(atan2(y, x)) % 360
+    # if y >= 0:
+    #     return degrees(atan2(y, x))
+    # else:
+    #     return 360-degrees(atan2(y, x))
+    return degrees(atan2(-y, x))
 
 
 def speed_upf(units_per_second, fps):
