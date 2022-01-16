@@ -884,6 +884,7 @@ def BattleEnemy_create(target):
     instance_render_text(target)
 
 def BattleEnemy_step(target):
+    global killedboss
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
 
     target.x = screen.get_canvas_halfwidth() + 128 * sin(radians(target.posphase))
@@ -942,8 +943,8 @@ EntBattleEnBullet = engine.Entity()
 #region [ОБЪЯВЛЕНИЕ ROOM]
 room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
 
-room_field = engine.Room([EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPlayer, EntFieldEnemy, EntFieldBoss,
-                          EntFieldPortal])
+room_field = engine.Room([EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy, EntFieldBoss,
+                          EntFieldPlayer])
 
 room_battle = engine.Room([EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleEnemy,
                            EntBattleEnBullet])
