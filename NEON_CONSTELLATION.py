@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                        #9
-    Daria Stolyarova                                                                              16.01.2022
+    Andrey Avramov                                                                                       #10
+    Daria Stolyarova                                                                              21.01.2022
 ''')
 
 pygame.init()
@@ -413,6 +413,7 @@ def FieldBoard_init_level(target): # расположение штук на по
     i = EntFieldPortal.instance()
     i.cellx, i.celly = randint(0, target.cellcount_x-1), randint(target.cellcount_y-1-2, target.cellcount_y-1)
     i.myboard = target
+    i.pl_ins = fplayer
     # переместить игрока
     fplayer.cellx = randint(0, target.cellcount_x-1)
     fplayer.celly = randint(target.cellcount_y-1-2, target.cellcount_y-1)
@@ -689,18 +690,26 @@ EntFieldBoss = engine.Entity(event_create=FieldBoss_create, event_step=FieldBoss
 #region [FIELD PORTAL]
 def FieldPortal_create(target):
     target.image = img_portal
-    target.image_alpha = target.image.copy()
-    paint_surface(target.image_alpha, (255, 255, 255, int(0.3*255)), pygame.BLEND_RGBA_MULT) # прозрачный вариант
+    target.image_alpha = target.image.copy() # прозрачный вариант
+    target.image_alpha.fill((255, 255, 255, 100), special_flags=pygame.BLEND_RGBA_MULT)
     target.image_angle = 0
     target.cellx = 0
     target.celly = 0
     target.myboard = None
     target.pl_ins = None # instance-экземпляр игрока
+    target.gotoshop_step = 0
+    target.gotoshop = False
 
 def FieldPortal_step(target):
-    if killedboss: # активизируется только в случае если босс убит
-        pass
+    if killedboss and (target.cellx == target.pl_ins.cellx and
+                       target.celly == target.pl_ins.celly): # активизируется только в случае если босс убит
+        target.gotoshop = True
     target.image_angle = (target.image_angle + UPF(45)) % 360 # крутится на 45 градусов каждую секунду
+    if target.gotoshop:
+        if target.gotoshop_step >= 1:
+            engine.rooms.change_current_room(room_shop)
+        else:
+            target.gotoshop_step += UPF(1/2)
 
 def FieldPortal_draw(target, surface: pygame.Surface):
     myimage = pygame.transform.rotate(target.image if killedboss else target.image_alpha, target.image_angle)
@@ -713,9 +722,22 @@ def FieldPortal_draw(target, surface: pygame.Surface):
                  (ox - deltawidth // 2 + 1,
                   oy - deltaheight // 2 + 1))
 
+def FieldPortal_draw_after(target, surface: pygame.Surface):
+    width, height = surface.get_size()
+    # Круг как в главном меню
+    half_diagonal = (((width ** 2) + (height ** 2)) ** 0.5) / 2
+    circle_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface2 = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface.fill('black')
+    pygame.draw.circle(circle_surface2, 'black', (width / 2, height / 2),
+                       half_diagonal * (max(0, 1.4 * (1 - target.gotoshop_step) - 0.4)), 0)
+    circle_surface.blit(circle_surface2, (0, 0), None, pygame.BLEND_RGBA_SUB)
+    surface.blit(circle_surface, (0, 0), None)
+
 EntFieldPortal = engine.Entity(event_create=FieldPortal_create,
                                event_step=FieldPortal_step,
-                               event_draw=FieldPortal_draw)
+                               event_draw=FieldPortal_draw,
+                               event_draw_after=FieldPortal_draw_after)
 #endregion
 #region [BATTLE PLAYER]
 def BattlePlayer_create(target):
@@ -938,6 +960,57 @@ EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=Battl
 #region [BATTLE EN BULLET]
 EntBattleEnBullet = engine.Entity()
 #endregion
+#region [SHOP BG]
+def ShopBG_create(target):
+    target.image = pygame.Surface(img_bg.get_size(), pygame.SRCALPHA)
+    target.image.blit(img_bg, (0, 0))
+    target.image.fill((100, 100, 100, 255), special_flags=pygame.BLEND_RGBA_MULT)
+    target.image = pygame.transform.scale(target.image,
+                                          (target.image.get_width()**2 / target.image.get_height(),
+                                           target.image.get_width())) # растягиваем так чтобы помещалась в экран
+    target.angle = 0
+
+def ShopBG_step(target):
+    target.angle = (target.angle+UPF(5)) % 360
+
+def ShopBG_draw_before(target, surface: pygame.Surface):
+    myimage = pygame.transform.rotate(target.image, target.angle)
+    ox = (surface.get_width()/2)-(myimage.get_width()/2)
+    oy = (surface.get_height()/2)-(myimage.get_height()/2)
+    surface.blit(myimage, (ox, oy))
+
+EntShopBG = engine.Entity(event_create=ShopBG_create,
+                          event_step=ShopBG_step,
+                          event_draw_before=ShopBG_draw_before)
+#endregion
+#region [SHOP BUTTON]
+def ShopButton_create(target):
+    target.x = 0
+    target.y = 0
+    target.color = (0,0,0)
+    target.string = "Кнопочка"
+    target.font = font_default
+    target.text_color = target.color
+
+    instance_render_text(target)
+
+def ShopButton_draw(target, surface: pygame.Surface):
+    width = 2*64
+    height = 3*64
+
+    bgcolor = (target.color[0]//2, target.color[1]//2, target.color[2]//2)
+
+    frame_x = target.x - width//2
+    frame_y = target.y - height//2
+
+    pygame.draw.rect(surface, bgcolor, (frame_x, frame_y, width, height), 0, 10)
+    pygame.draw.rect(surface, target.color, (frame_x, frame_y, width, height), 2, 10)
+
+    surface.blit(target.text[0], (target.x-target.text[0].get_width()//2, frame_y+8))
+
+EntShopButton = engine.Entity(event_create=ShopButton_create,
+                              event_draw=ShopButton_draw)
+#endregion
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
@@ -949,7 +1022,10 @@ room_field = engine.Room([EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPo
 room_battle = engine.Room([EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleEnemy,
                            EntBattleEnBullet])
 
+room_shop = engine.Room([EntGlobalCheats, EntShopBG, EntShopButton])
+
 engine.rooms.change_current_room(room_mainmenu)
+#engine.rooms.change_current_room(room_shop)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
@@ -1033,6 +1109,34 @@ fplayer.myboard = fboard
 bplayer = EntBattlePlayer.instance()
 
 benemy = EntBattleEnemy.instance()
+
+
+
+shopbg = EntShopBG.instance()
+
+shopbutton1 = EntShopButton.instance()
+shopbutton1.color = (155, 255, 155)
+shopbutton1.string = '+1 МАКС ХП'
+shopbutton1.text_color = shopbutton1.color
+shopbutton1.x = screen.get_canvas_halfwidth()
+shopbutton1.y = screen.get_canvas_halfheight()
+instance_render_text(shopbutton1)
+
+shopbutton2 = EntShopButton.instance()
+shopbutton2.color = (255, 155, 155)
+shopbutton2.string = 'СКР СТРЕЛЬБ'
+shopbutton2.text_color = shopbutton2.color
+shopbutton2.x = screen.get_canvas_halfwidth() - 160
+shopbutton2.y = screen.get_canvas_halfheight()
+instance_render_text(shopbutton2)
+
+shopbutton3 = EntShopButton.instance()
+shopbutton3.color = (155, 155, 255)
+shopbutton3.string = '+1 БРОНЯ'
+shopbutton3.text_color = shopbutton3.color
+shopbutton3.x = screen.get_canvas_halfwidth() + 160
+shopbutton3.y = screen.get_canvas_halfheight()
+instance_render_text(shopbutton3)
 #endregion
 
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
@@ -1087,8 +1191,8 @@ def paint_surface(surface: pygame.Surface,
                   method: int):
     '''Красит pygame.Surface по определенному методу pygame.'''
     ns = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-    ns.fill(color)
-    surface.blit(ns, (0, 0), None, method)
+    surface.blit(ns, (0, 0))
+    ns.fill(color, special_flags=method)
 
 
 a = 0
