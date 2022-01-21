@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #11
+    Andrey Avramov                                                                                       #12
     Daria Stolyarova                                                                              21.01.2022
 ''')
 
@@ -43,6 +43,7 @@ mask_enemy0 = pygame.mask.from_surface(img_enemy0_idle)
 img_instructions = engine.load_image('instructions.png')
 img_objective = engine.load_image('objective.png')
 img_portal = engine.load_image('portal.png')
+img_credit = engine.load_image('credit.png')
 
 sfx_detected = pygame.mixer.Sound('data/sfx_detected.wav')
 sfx_detected.set_volume(0.5)
@@ -111,9 +112,12 @@ def GlobalCredits_create(target):
 
 def GlobalCredits_draw_after(target, surface: pygame.Surface):
     text = target.font.render(str(money), False, 'white')
-    ox = surface.get_width() - text.get_width() - 8
-    oy = surface.get_height() - text.get_height() - 8
-    surface.blit(text, (ox, oy))
+    ox1 = surface.get_width() - text.get_width() - 16
+    oy1 = surface.get_height() - text.get_height() - 4
+    ox2 = surface.get_width() - 12
+    oy2 = surface.get_height() - 18
+    surface.blit(text, (ox1, oy1))
+    surface.blit(img_credit, (ox2, oy2))
 
 EntGlobalCredits = engine.Entity(event_create=GlobalCredits_create,
                                  event_draw_after=GlobalCredits_draw_after)
