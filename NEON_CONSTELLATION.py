@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #10
+    Andrey Avramov                                                                                       #11
     Daria Stolyarova                                                                              21.01.2022
 ''')
 
@@ -104,6 +104,19 @@ EntGlobalCheats = engine.Entity(event_create=GlobalCheats_create,
                                 event_draw_after=GlobalCheats_draw_after,
                                 event_kb_pressed=GlobalCheats_kb_pressed,
                                 event_kb_released=GlobalCheats_kb_released)
+#endregion
+#region [GLOBAL CREDITS]
+def GlobalCredits_create(target):
+    target.font = font_default
+
+def GlobalCredits_draw_after(target, surface: pygame.Surface):
+    text = target.font.render(str(money), False, 'white')
+    ox = surface.get_width() - text.get_width() - 8
+    oy = surface.get_height() - text.get_height() - 8
+    surface.blit(text, (ox, oy))
+
+EntGlobalCredits = engine.Entity(event_create=GlobalCredits_create,
+                                 event_draw_after=GlobalCredits_draw_after)
 #endregion
 #region [MAINMENU BG]
 def MainMenuBG_create(target):
@@ -812,9 +825,12 @@ def BattlePlayer_draw(target, surface: pygame.Surface):
     recth = 12
     rectx = surface.get_width()//2 - rectw//2
     recty = surface.get_height() - recth - 8
-    pygame.draw.rect(mysurface, (55, 155, 55), (rectx, recty, rectw, recth))
-    pygame.draw.rect(mysurface, (55, 255, 55), (rectx, recty, rectw * (hp / maxhp), recth))
-    pygame.draw.rect(mysurface, 'black', (rectx, recty, rectw, recth), 1)
+    pygame.draw.rect(mysurface, (55, 155, 55), (rectx, recty, rectw, recth)) # макс хп
+    pygame.draw.rect(mysurface, (55, 255, 55), (rectx, recty, rectw * (hp / maxhp), recth)) # сколько хп
+    for i in range(1, maxhp):
+        ox = rectw*i/maxhp
+        pygame.draw.line(mysurface, (35, 55, 35), (rectx+ox, recty), (rectx+ox, recty+recth-1)) # делящие палочки
+    pygame.draw.rect(mysurface, 'black', (rectx, recty, rectw, recth), 1) # обводка
     mysurface.blit(target.text[0], (surface.get_width() // 2 - target.text[0].get_width() // 2,
                                     recty - target.text[0].get_height() - 4))
     paint_surface(mysurface, (255, 255, 255, 125), pygame.BLEND_RGBA_MULT)  # прозрачность
@@ -1014,15 +1030,17 @@ EntShopButton = engine.Entity(event_create=ShopButton_create,
 #endregion
 
 #region [ОБЪЯВЛЕНИЕ ROOM]
+global_entities = [EntGlobalCredits, EntGlobalCheats] # должны быть во всех комнатах
+
 room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
 
-room_field = engine.Room([EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy, EntFieldBoss,
-                          EntFieldPlayer])
+room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy,
+                          EntFieldBoss, EntFieldPlayer])
 
-room_battle = engine.Room([EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleEnemy,
-                           EntBattleEnBullet])
+room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet,
+                           EntBattleEnemy, EntBattleEnBullet])
 
-room_shop = engine.Room([EntGlobalCheats, EntShopBG, EntShopButton])
+room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton])
 
 engine.rooms.change_current_room(room_mainmenu)
 #engine.rooms.change_current_room(room_shop)
@@ -1030,6 +1048,7 @@ engine.rooms.change_current_room(room_mainmenu)
 
 #region [СОЗДАНИЕ INSTANCE]
 cheats = EntGlobalCheats.instance()
+credit_counter = EntGlobalCredits.instance()
 
 bg1 = EntMainMenuBG.instance()
 bg1.image = img_bg
