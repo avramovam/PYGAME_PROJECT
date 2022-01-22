@@ -925,6 +925,14 @@ def BattleEnemy_create(target):
 
     instance_render_text(target)
 
+    r = 16
+    target.points = []
+    for ang in range(0, 361):
+        target.points.append((screen.get_canvas_halfwidth() + engine.lengthdir_x(r, ang),
+                              screen.get_canvas_halfheight() + engine.lengthdir_y(r, ang)))
+
+    target.gotofield_step = 0
+
 def BattleEnemy_step(target):
     global killedboss
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
@@ -941,10 +949,22 @@ def BattleEnemy_step(target):
     if target.hp <= 0:
         if enemyid == 5: # был босс
             killedboss = True
-        engine.rooms.change_current_room(room_field)
+        if target.gotofield_step >= 1:
+            engine.rooms.change_current_room(room_field)
+        else:
+            target.gotofield_step += UPF(1/4)
 
 def BattleEnemy_draw(target, surface: pygame.Surface):
-    surface.blit(target.image, (target.x - target.image.get_width()//2, target.y))
+    if target.hp <= 0:
+        ang = int(target.gotofield_step * len(target.points))
+        if ang >= 2:
+            pygame.draw.polygon(surface, 'white', target.points[:ang]+target.points[:ang][::-1], 3)
+
+        text = font_default.render(str(ceil(4*(1-target.gotofield_step))), 0, 'white')
+        surface.blit(text, ((surface.get_width() - text.get_width())//2,
+                            (surface.get_height() - text.get_height())//2))
+    else:
+        surface.blit(target.image, (target.x - target.image.get_width()//2, target.y))
 
 def BattleEnemy_draw_after(target, surface: pygame.Surface):
     mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
@@ -972,6 +992,9 @@ def BattleEnemy_room_start(target):
 
     target.maxhp = 100
     target.hp = target.maxhp // 2
+    target.gotofield_step = 0
+    target.posphase = 0
+    target.show_step = 0
 
 EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=BattleEnemy_step,
                                event_draw=BattleEnemy_draw, event_draw_after=BattleEnemy_draw_after,
