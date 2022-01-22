@@ -819,7 +819,9 @@ def BattlePlayer_step(target):
         target.shooting_delay -= UPF(5*shootspeed)
 
 def BattlePlayer_draw(target, surface: pygame.Surface):
-    # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
+    global p_pos_x, p_pos_y
+    # print("x, y player:", target.x, target.y)
+    p_pos_x, p_pos_y = target.x, target.y
     myimage = pygame.transform.rotate(target.image, target.image_angle)
     paint_surface(myimage, (255, 255, 255, 255 - 100*target.invulner_time), pygame.BLEND_RGBA_MULT) # прозрачность!
     surface.blit(myimage, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
@@ -875,6 +877,7 @@ EntBattlePlayer = engine.Entity(event_create=BattlePlayer_create, event_step=Bat
 #endregion
 #region [BATTLE PL BULLET]
 def BattlePlBullet_create(target):
+
     target.x = 0
     target.y = 0
     target.direction = 90
@@ -903,10 +906,51 @@ def BattlePlBullet_room_end(target):
     if target in EntBattlePlBullet.instances:
         del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
 
+
+# Пули от врага
+
+def BattleElBullet_create(target):
+    global p_pos_x, p_pos_y, e_pos_x, e_pos_y
+    target.x = 0
+    target.y = 0
+    target.direction = get_direction(e_pos_x, e_pos_y, p_pos_x, p_pos_y)
+    target.speed = UPF(100*bulletspeed)
+    target.image = img_bullet_test
+    target.mask = mask_bullet
+
+def BattleElBullet_step(target):
+    target.x += engine.lengthdir_x(target.speed, target.direction)
+    target.y += engine.lengthdir_y(target.speed, target.direction)
+
+    if (not (0-16 < target.x < screen.get_canvas_width()+16)) or \
+       (not (0-16 < target.y < screen.get_canvas_height()+16)): # за пределами экрана
+        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)] # самоуничтожение
+
+def BattleElBullet_step_after(target):
+    if target in EntBattlePlBullet.instances:
+        if target.mask.overlap(benemy.mask, (
+        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)):  # попал в противника
+            del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+
+def BattleElBullet_draw(target, surface: pygame.Surface):
+    surface.blit(target.image, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
+
+def BattleElBullet_room_end(target):
+    if target in EntBattlePlBullet.instances:
+        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+
+
+
 EntBattlePlBullet = engine.Entity(event_create=BattlePlBullet_create,
                                   event_step=BattlePlBullet_step, event_step_after=BattlePlBullet_step_after,
                                   event_draw=BattlePlBullet_draw,
                                   event_room_end=BattlePlBullet_room_end)
+
+
+EntBattleElBullet = engine.Entity(event_create=BattleElBullet_create,
+                                  event_step=BattleElBullet_step, event_step_after=BattleElBullet_step_after,
+                                  event_draw=BattleElBullet_draw,
+                                  event_room_end=BattleElBullet_room_end)
 #endregion
 #region [BATTLE ENEMY]
 def BattleEnemy_create(target):
@@ -926,7 +970,11 @@ def BattleEnemy_create(target):
     instance_render_text(target)
 
 def BattleEnemy_step(target):
-    global killedboss
+    global killedboss, e_pos_x, e_pos_y, p_pos_x, p_pos_y
+    print("direct:", get_direction(e_pos_x, e_pos_y, p_pos_x, p_pos_y))
+
+    # print("x, y enemy:", target.x, target.y)
+    e_pos_x, e_pos_y = target.x, target.y
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
 
     target.x = screen.get_canvas_halfwidth() + 128 * sin(radians(target.posphase))
@@ -935,6 +983,10 @@ def BattleEnemy_step(target):
     target.posphase = (target.posphase + UPF(15)) % 360
 
     for bullet in EntBattlePlBullet.instances:
+        if target.mask.overlap(mask_bullet, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
+            target.hp -= bulletdamage
+
+    for bullet in EntBattleElBullet.instances:
         if target.mask.overlap(mask_bullet, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
             target.hp -= bulletdamage
 
@@ -999,6 +1051,7 @@ def ShopBG_draw_before(target, surface: pygame.Surface):
     oy = (surface.get_height()/2)-(myimage.get_height()/2)
     surface.blit(myimage, (ox, oy))
 
+
 EntShopBG = engine.Entity(event_create=ShopBG_create,
                           event_step=ShopBG_step,
                           event_draw_before=ShopBG_draw_before)
@@ -1041,8 +1094,10 @@ room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, En
 room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy,
                           EntFieldBoss, EntFieldPlayer])
 
-room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet,
+room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet, EntBattleElBullet,
                            EntBattleEnemy, EntBattleEnBullet])
+
+
 
 room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton])
 
@@ -1111,7 +1166,9 @@ mmb3.string = 'Выйти'
 instance_render_text(mmb3)
 mmb3.press_link = MainMenuButton_user2
 
-
+e_pos_x, e_pos_y, p_pos_x, p_pos_y = 0, 0, 0, 0
+def get_direction(x1, y1, x2, y2):
+    return engine.point_direction(x1, y1, x2, y2)
 
 fboard = EntFieldBoard.instance()
 
@@ -1236,6 +1293,7 @@ while game_running:
             engine.rooms.current_room.do_kb_pressed(event.key)
         elif event.type == pygame.KEYUP:
             engine.rooms.current_room.do_kb_released(event.key)
+
 
     screen.get_canvas().fill('black')
     engine.rooms.current_room.do_step(screen.get_canvas())
