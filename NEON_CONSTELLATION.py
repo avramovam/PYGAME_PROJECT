@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #12
-    Daria Stolyarova                                                                              21.01.2022
+    Andrey Avramov                                                                                       #13
+    Daria Stolyarova                                                                              22.01.2022
 ''')
 
 pygame.init()
@@ -26,8 +26,6 @@ pixelscale = 2
 screen = engine.Screen((16*scale, 9*scale), (16*scale*pixelscale, 9*scale*pixelscale), 0, 1)
 clock = pygame.time.Clock()
 FPS = 60
-
-del scale, pixelscale
 
 img_bg = pygame.transform.scale(engine.load_image('bg.png'), (screen.get_canvas_width()*1, screen.get_canvas_height()*1))
 img_player_battle = engine.load_image('player_battle.png')
@@ -173,11 +171,17 @@ EntMainMenuText = engine.Entity(event_create=MainMenuText_create, event_draw=Mai
 #endregion
 #region [MAINMENU BUTTON]
 def MainMenuButton_user0(): # Переход на поле
-    instr.show = 1
+    if not settings.show and not instr.show:
+        instr.show = 1
+
+def MainMenuButton_user1(): # Настройки
+    if not settings.show and not instr.show:
+        settings.show = 1
 
 def MainMenuButton_user2(): # Выход
-    global game_running
-    game_running = 0
+    if not settings.show and not instr.show:
+        global game_running
+        game_running = 0
 
 def MainMenuButton_create(target):
     target.x, target.y = 0, 0
@@ -365,6 +369,89 @@ def MainMenuInstr_mouse_pressed(target, mousepos, buttonid):
 EntMainMenuInstr = engine.Entity(event_create=MainMenuInstr_create, event_step=MainMenuInstr_step,
                                  event_draw_after=MainMenuInstr_draw_after,
                                  event_mouse_pressed=MainMenuInstr_mouse_pressed)
+#endregion
+#region [MAINMENU SETTINGS]
+def MainMenuSettings_create(target):
+    target.show = 0
+    target.show_step = 0
+
+    target.text1 = font_default.render('Громкость', 0, 'white')
+    target.text2 = font_default.render('Режим отображения', 0, 'white')
+    target.text3 = font_default.render('Оконный режим', 0, 'black')
+    target.text4 = font_default.render('Назад', 0, 'black')
+
+def MainMenuSettings_step(target):
+    if target.show:
+        target.show_step = engine.clamp(target.show_step+UPF(1), 0, 1)
+    else:
+        target.show_step = engine.clamp(target.show_step-UPF(1), 0, 1)
+
+def MainMenuSettings_draw_after(target, surface: pygame.Surface):
+    width, height = surface.get_size()
+
+    showphase = sin(radians(target.show_step * 90))
+
+    # ЗАТЕНЕНИЕ
+    faded = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    faded.fill((0, 0, 0, 255 * showphase * 0.65))
+    surface.blit(faded, (0, 0))
+
+    # ТЕКСТА
+    tw1, th1 = target.text1.get_size()
+    tw2, th2 = target.text2.get_size()
+    surface.blit(target.text1, ((surface.get_width() - tw1)//2 - 512 + (512*showphase), surface.get_height()//2 - 96))
+    surface.blit(target.text2, ((surface.get_width() - tw2)//2 + 512 - (512*showphase), surface.get_height()//2 + 48))
+
+    # КНОПКА
+    tw3, th3 = target.text3.get_size()
+    fs = 16
+    button1_x = screen.get_canvas_halfwidth() + 512 - (512 * showphase)
+    button1_y = screen.get_canvas_halfheight() + 96
+    rect_coords = (button1_x - ((tw3 + fs) // 2), button1_y - ((th3 + fs) // 2), tw3 + fs, th3 + fs)
+    text_coords = (button1_x - (tw3 // 2), button1_y - (th3 // 2))
+    rounding = 4  # величина скругления задника
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text3, text_coords)
+
+    tw4, th4 = target.text4.get_size()
+    button2_x = screen.get_canvas_halfwidth()
+    button2_y = screen.get_canvas_height() - 32 + 128 - (128 * showphase)
+    rect_coords = (button2_x - ((tw4 + fs) // 2), button2_y - ((th4 + fs) // 2), tw4 + fs, th4 + fs)
+    text_coords = (button2_x - (tw4 // 2), button2_y - (th4 // 2))
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text4, text_coords)
+
+def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
+    showphase = sin(radians(target.show_step * 90))
+
+    fs = 16
+    tw, th = target.text3.get_size()
+    xd, yd = (tw+fs)//2, (th+fs)//2
+
+    button1_x = screen.get_canvas_halfwidth() + 512 - (512*showphase)
+    button1_y = screen.get_canvas_halfheight() + 96
+
+    xrange1 = button1_x - xd <= mousepos[0] <= button1_x + xd
+    yrange1 = button1_y - yd <= mousepos[1] <= button1_y + yd
+
+    button2_x = screen.get_canvas_halfwidth()
+    button2_y = screen.get_canvas_height() - 32 + 128 - (128*showphase)
+
+    xrange2 = button2_x - xd <= mousepos[0] <= button2_x + xd
+    yrange2 = button2_y - yd <= mousepos[1] <= button2_y + yd
+
+    if (xrange1 and yrange1):
+        print('A')
+
+    if (xrange2 and yrange2):
+        target.show = 0
+
+EntMainMenuSettings = engine.Entity(event_create=MainMenuSettings_create,
+                                    event_step=MainMenuSettings_step,
+                                    event_draw_after=MainMenuSettings_draw_after,
+                                    event_mouse_pressed=MainMenuSettings_mouse_pressed)
 #endregion
 #region [FIELD BG]
 def FieldBG_create(target):
@@ -767,7 +854,7 @@ def BattlePlayer_create(target):
                    'right': False,
                    'left': False}
     target.maxspeed = UPF(128)
-    target.friction = target.maxspeed/(UPF(10)**-1) # разгоняется за десятую секунды
+    target.friction = target.maxspeed*UPF(10) # разгоняется за десятую секунды (наверное)
     target.hsp = 0
     target.vsp = 0
     target.shooting_delay = 0
@@ -960,9 +1047,12 @@ def BattleEnemy_draw(target, surface: pygame.Surface):
         if ang >= 2:
             pygame.draw.polygon(surface, 'white', target.points[:ang]+target.points[:ang][::-1], 3)
 
-        text = font_default.render(str(ceil(4*(1-target.gotofield_step))), 0, 'white')
-        surface.blit(text, ((surface.get_width() - text.get_width())//2,
-                            (surface.get_height() - text.get_height())//2))
+        text1 = font_default.render(str(ceil(4*(1-target.gotofield_step))), 0, 'white')
+        surface.blit(text1, ((surface.get_width() - text1.get_width())//2,
+                            (surface.get_height() - text1.get_height())//2))
+        text2 = font_small.render('Возвращаем на поле...', 0, 'white')
+        surface.blit(text2, ((surface.get_width() - text2.get_width())//2,
+                            (surface.get_height() - text2.get_height())//2 + 32))
     else:
         surface.blit(target.image, (target.x - target.image.get_width()//2, target.y))
 
@@ -1059,7 +1149,8 @@ EntShopButton = engine.Entity(event_create=ShopButton_create,
 #region [ОБЪЯВЛЕНИЕ ROOM]
 global_entities = [EntGlobalCredits, EntGlobalCheats] # должны быть во всех комнатах
 
-room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr])
+room_mainmenu = engine.Room([EntGlobalCheats, EntMainMenuBG, EntMainMenuText, EntMainMenuButton, EntMainMenuInstr,
+                             EntMainMenuSettings])
 
 room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFieldBoard, EntFieldPortal, EntFieldEnemy,
                           EntFieldBoss, EntFieldPlayer])
@@ -1114,6 +1205,8 @@ instance_render_text(controls)
 
 instr = EntMainMenuInstr.instance()
 
+settings = EntMainMenuSettings.instance()
+
 mmb1 = EntMainMenuButton.instance()
 mmb1.x = screen.get_canvas_halfwidth()
 mmb1.y = screen.get_canvas_halfheight() - 48
@@ -1126,6 +1219,7 @@ mmb2.x = screen.get_canvas_halfwidth()
 mmb2.y = screen.get_canvas_halfheight()
 mmb2.string = 'Настройки'
 instance_render_text(mmb2)
+mmb2.press_link = MainMenuButton_user1
 
 mmb3 = EntMainMenuButton.instance()
 mmb3.x = screen.get_canvas_halfwidth()
