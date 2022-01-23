@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #14
+    Andrey Avramov                                                                                       #16
     Daria Stolyarova                                                                              23.01.2022
 ''')
 
@@ -557,8 +557,10 @@ def FieldBoard_init_level(target): # расположение штук на по
         i.cellx, i.celly = ucfe.pop(randint(0, len(ucfe)-1))
         i.enemyid = randint(0, 4)
         i.pl_ins = fplayer
-        i.detect_method = (FieldEnemy_detect0, FieldEnemy_detect0,
-                           FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0)[i.enemyid]
+        i.detect_method = (FieldEnemy_detect0, FieldEnemy_detect1,
+                           FieldEnemy_detect2, FieldEnemy_detect3, FieldEnemy_detect4)[i.enemyid]
+        if i.detect_method == FieldEnemy_detect0:
+            i.detect_phase = randint(0, 3)
         i.image = (img_board_enemy0, img_board_enemy1,
                    img_board_enemy0, img_board_enemy1, img_board_enemy0)[i.enemyid]
         i.myboard = target
@@ -710,24 +712,28 @@ def FieldPlayer_kb_pressed(target, buttonid):
             target.nextcelly = target.celly
             for ins in EntFieldEnemy.instances:
                 ins.detect_phase = (ins.detect_phase + 1) % 4
+                FieldEnemy_change_pos(ins)
         elif buttonid == pygame.K_RIGHT:
             target.cellx = engine.clamp(target.cellx + 1, 0, target.myboard.cellcount_x-1)
             target.nextcellx = target.cellx + 1
             target.nextcelly = target.celly
             for ins in EntFieldEnemy.instances:
                 ins.detect_phase = (ins.detect_phase + 1) % 4
+                FieldEnemy_change_pos(ins)
         elif buttonid == pygame.K_UP:
             target.celly = engine.clamp(target.celly - 1, 0, target.myboard.cellcount_y-1)
             target.nextcellx = target.cellx
             target.nextcelly = target.celly - 1
             for ins in EntFieldEnemy.instances:
                 ins.detect_phase = (ins.detect_phase + 1) % 4
+                FieldEnemy_change_pos(ins)
         elif buttonid == pygame.K_DOWN:
             target.celly = engine.clamp(target.celly + 1, 0, target.myboard.cellcount_y-1)
             target.nextcellx = target.cellx
             target.nextcelly = target.celly + 1
             for ins in EntFieldEnemy.instances:
                 ins.detect_phase = (ins.detect_phase + 1) % 4
+                FieldEnemy_change_pos(ins)
 
 def FieldPlayer_room_start(target):
     pygame.mixer.music.load('data/onfield.mp3')
@@ -747,10 +753,10 @@ EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=Field
                                event_room_end=FieldPlayer_room_end)
 #endregion
 #region [FIELD ENEMY]
-def FieldEnemy_detect_test(target, myx, myy, playerx, playery, phase): # тестовый вариант - крест
+def FieldEnemy_detect_test(myx, myy, playerx, playery, phase): # тестовый вариант - крест
     return (myx == playerx) or (myy == playery)
 
-def FieldEnemy_detect0(myx, myy, playerx, playery, phase): # тестовый вариант - крест
+def FieldEnemy_detect0(myx, myy, playerx, playery, phase): # луч
     if phase == 0:
         return (myx == playerx) and (myy <= playery)
     elif phase == 1:
@@ -760,6 +766,43 @@ def FieldEnemy_detect0(myx, myy, playerx, playery, phase): # тестовый в
     elif phase == 3:
         return (myx <= playerx) and (myy == playery)
 
+def FieldEnemy_detect1(myx, myy, playerx, playery, phase): # радиус-3-крест
+    return ((myx == playerx) or (myy == playery)) and ((abs(playerx-myx)+abs(playery-myy)) <= 3)
+
+def FieldEnemy_detect2(myx, myy, playerx, playery, phase): # ежетрехфазовый ферзь
+    if phase == 0:
+        return False
+    if phase == 1:
+        return (abs(myx-playerx) == 0) and (abs(myy-playery) == 0)
+    if phase == 2:
+        return (abs(myx-playerx) <= 1) and (abs(myy-playery) <= 1)
+    if phase == 3:
+        return (myx == playerx) or (myy == playery) or (abs(playerx-myx) == abs(playery-myy))
+
+def FieldEnemy_detect3(myx, myy, playerx, playery, phase): # круговая мина
+    return (abs(myx-playerx) <= 1) and (abs(myy-playery) <= 1)
+
+def FieldEnemy_detect4(myx, myy, playerx, playery, phase): # сфера
+    dx = abs(myx-playerx)
+    dy = abs(myy-playery)
+    return (dx+dy <= 3) and not (dx >= 3 or dy >= 3)
+
+def FieldEnemy_change_pos(target):
+    if target.detect_method == FieldEnemy_detect0:
+        target.image_angle = (-90*target.detect_phase) % 360
+    if target.detect_method == FieldEnemy_detect3:
+        if target.detect_phase == 0:
+            target.celly += 1
+            target.image_angle = 180
+        elif target.detect_phase == 1:
+            target.cellx -= 1
+            target.image_angle = 90
+        elif target.detect_phase == 2:
+            target.celly -= 1
+            target.image_angle = 0
+        elif target.detect_phase == 3:
+            target.cellx += 1
+            target.image_angle = 270
 
 def FieldEnemy_create(target):
     target.image = None
@@ -780,6 +823,8 @@ def FieldEnemy_create(target):
     '''    ^^^^^^^   сие ID вражеского корабля, с которым игрок вступает в бой при обнаружении игрока'''
     target.detect_phase = 0
     target.pl_ins = None # instance-экземпляр игрока
+    target.detect_color = pygame.Color(255, 0, 0, 55)
+    target.detect_color.hsva = (randint(-30, 30) % 360, 100, 50, 55)
 
 def FieldEnemy_step(target):
     global whodetected, enemyid
@@ -806,7 +851,6 @@ def FieldEnemy_step(target):
             whodetected = target
 
 def FieldEnemy_draw(target, surface: pygame.Surface):
-    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
     mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     # далее подсветка клеток, которые входят в поле обнаружения
     if (target.myboard is not None) and (target.detect_method is not None):
@@ -815,11 +859,12 @@ def FieldEnemy_draw(target, surface: pygame.Surface):
         for cx in range(target.myboard.cellcount_x):
             for cy in range(target.myboard.cellcount_y):
                 if target.detect_method(target.cellx, target.celly, cx, cy, target.detect_phase):
-                    pygame.draw.rect(mysurface, (255,0,0,55), (ox, oy, cs, cs))
+                    pygame.draw.rect(mysurface, target.detect_color, (ox, oy, cs, cs))
                 oy += cs + 1
             ox += cs + 1
             oy = target.myboard.start_y + 1
     surface.blit(mysurface, (0,0))
+    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
 
 def FieldEnemy_room_start(target):
     if whodetected == target:
