@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #16
+    Andrey Avramov                                                                                       #17
     Daria Stolyarova                                                                              23.01.2022
 ''')
 
@@ -45,7 +45,9 @@ mask_enemy1 = pygame.mask.from_surface(img_enemy1)
 img_instructions = engine.load_image('instructions.png')
 img_objective = engine.load_image('objective.png')
 img_portal = engine.load_image('portal.png')
+
 img_credit = engine.load_image('credit.png')
+mask_credit_item = pygame.mask.Mask((img_credit.get_width()+8, img_credit.get_height()+8), True)
 
 sfx_detected = pygame.mixer.Sound('data/sfx_detected.wav')
 sfx_detected.set_volume(0.5)
@@ -110,8 +112,15 @@ def GlobalCheats_kb_pressed(target, buttonid):
             if buttonid == pygame.K_m: # деньгииииии
                 money += 100
                 sfx_buy.play()
-            if buttonid == pygame.K_d: # урон
+            if buttonid == pygame.K_d: # урон себе
                 BattlePlayer_got_hurt(bplayer)
+            if buttonid == pygame.K_a: # урон врагу
+                benemy.hp -= 1
+            if buttonid == pygame.K_j: # убить себя
+                hp = 1
+                BattlePlayer_got_hurt(bplayer)
+            if buttonid == pygame.K_k: # убить врага
+                benemy.hp = 0
 
 def GlobalCheats_kb_released(target, buttonid):
     target.keys[buttonid] = False
@@ -1171,6 +1180,7 @@ def BattleEnemy_create(target):
                               screen.get_canvas_halfheight() + engine.lengthdir_y(r, ang)))
 
     target.gotofield_step = 0
+    target.created_credits = False
 
 def BattleEnemy_step(target):
     global killedboss
@@ -1184,6 +1194,19 @@ def BattleEnemy_step(target):
     for bullet in EntBattlePlBullet.instances:
         if target.mask.overlap(mask_bullet, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
             target.hp -= bulletdamage
+            if target.hp <= 0 and not target.created_credits:
+                target.created_credits = True
+                for r in range(randint(20, 50) + (40 * (enemyid == 5))): # 20..50 - обычный враг, 60..90 - босс
+                    i = EntBattleCredits.instance()
+                    i.x = target.x + randint(-64, 64)
+                    i.y = target.y + randint(0, 8)
+                    i.rotate = randint(0, 359)
+            else:
+                if randint(1, 10 - (5 * (enemyid == 5))) == 1: # 10% - обычный враг, 50% - босс
+                    i = EntBattleCredits.instance()
+                    i.x = target.x + randint(-64, 64)
+                    i.y = target.y + randint(0, 8)
+                    i.rotate = randint(0, 359)
 
     if target.hp <= 0:
         if enemyid == 5: # был босс
@@ -1249,6 +1272,7 @@ def BattleEnemy_room_start(target):
     target.gotofield_step = 0
     target.posphase = 0
     target.show_step = 0
+    target.created_credits = False
 
 EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=BattleEnemy_step,
                                event_draw=BattleEnemy_draw, event_draw_after=BattleEnemy_draw_after,
@@ -1256,6 +1280,53 @@ EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=Battl
 #endregion
 #region [BATTLE EN BULLET]
 EntBattleEnBullet = engine.Entity()
+#endregion
+#region [BATTLE CREDITS]
+def BattleCredits_create(target):
+    target.x = 0
+    target.y = 0
+    target.rotate = 0
+    target.hsp = UPF(randint(-20, 20))
+    target.vsp = UPF(30)
+    target.mask = mask_credit_item
+
+def BattleCredits_step(target):
+    global money
+    target.x += target.hsp
+    target.y += target.vsp
+
+    target.rotate = target.rotate + UPF(180)
+
+    target.hsp = engine.interpolate(target.hsp, 0, 3, 0)
+
+    if not (0 <= target.x <= screen.get_canvas_width()) or not (0 <= target.y <= screen.get_canvas_height()):
+        del EntBattleCredits.instances[EntBattleCredits.instances.index(target)]
+
+    if target.mask.overlap(bplayer.mask, (target.x - bplayer.x, target.y - bplayer.y)):
+        money += 1
+        del EntBattleCredits.instances[EntBattleCredits.instances.index(target)]
+
+def BattleCredits_draw(target, surface: pygame.Surface):
+    phase = sin(radians(target.rotate))
+    myimage = pygame.Surface((img_credit.get_width()+8, img_credit.get_height()+8), pygame.SRCALPHA)
+    pygame.draw.rect(myimage, 'gray70', (0, 0, *myimage.get_size()), 0, 4)
+    pygame.draw.rect(myimage, 'gray40', (0, 0, *myimage.get_size()), 2, 4)
+    myimage.blit(img_credit, (4, 4))
+    myimage = pygame.transform.scale(myimage, (myimage.get_width()*abs(phase), myimage.get_height()))
+    myimage = pygame.transform.flip(myimage, phase < 0, False)
+
+    ox = target.x - myimage.get_width()//2
+    oy = target.y - myimage.get_height()//2
+    surface.blit(myimage, (ox, oy))
+
+def BattleCredits_room_end(target):
+    if target in EntBattleCredits.instances:
+        del EntBattleCredits.instances[EntBattleCredits.instances.index(target)]
+
+EntBattleCredits = engine.Entity(event_create=BattleCredits_create,
+                                 event_step=BattleCredits_step,
+                                 event_draw=BattleCredits_draw,
+                                 event_room_end=BattleCredits_room_end)
 #endregion
 #region [SHOP BG]
 def ShopBG_create(target):
@@ -1466,7 +1537,7 @@ room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFiel
                           EntFieldBoss, EntFieldPlayer])
 
 room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet,
-                           EntBattleEnemy, EntBattleEnBullet])
+                           EntBattleEnemy, EntBattleEnBullet, EntBattleCredits])
 
 room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton, EntShopContinue])
 
