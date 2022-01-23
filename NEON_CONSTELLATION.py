@@ -15,12 +15,12 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #13
-    Daria Stolyarova                                                                              22.01.2022
+    Andrey Avramov                                                                                       #14
+    Daria Stolyarova                                                                              23.01.2022
 ''')
 
 pygame.init()
-USER_SCREENSIZE = engine.get_screensize(engine.pygame_videoinfo()) # размер монитора пользователя
+engine.SCREENSIZE = engine.get_screensize(engine.pygame_videoinfo()) # размер монитора пользователя
 scale = 40
 pixelscale = 2
 screen = engine.Screen((16*scale, 9*scale), (16*scale*pixelscale, 9*scale*pixelscale), 0, 1)
@@ -45,6 +45,14 @@ img_credit = engine.load_image('credit.png')
 
 sfx_detected = pygame.mixer.Sound('data/sfx_detected.wav')
 sfx_detected.set_volume(0.5)
+sfx_buy = pygame.mixer.Sound('data/sfx_purchase.wav')
+sfx_buy.set_volume(0.5)
+sfx_nobuy = pygame.mixer.Sound('data/sfx_failed_purchase.wav')
+sfx_nobuy.set_volume(0.5)
+sfx_hurt = pygame.mixer.Sound('data/sfx_hurt.wav')
+sfx_hurt.set_volume(0.25)
+sfx_death = pygame.mixer.Sound('data/sfx_death.wav')
+sfx_death.set_volume(0.5)
 
 def UPF(units_per_second):
     '''Сокращение функции engine.speed_upf, которая возвращает скорость "еденицы в кадр",
@@ -87,7 +95,7 @@ def GlobalCheats_draw_after(target, surface: pygame.Surface):
                   centered=False)
 
 def GlobalCheats_kb_pressed(target, buttonid):
-    global cheats_nodetect, cheats_enabled
+    global cheats_nodetect, cheats_enabled, money
     target.keys[buttonid] = True
     if target.keys[pygame.K_LALT] or target.keys[pygame.K_RALT]:
         if buttonid == pygame.K_RETURN: # вкл/выкл читы
@@ -95,6 +103,11 @@ def GlobalCheats_kb_pressed(target, buttonid):
         if cheats_enabled: # остальное пока читы включены
             if buttonid == pygame.K_n: # незаметность
                 cheats_nodetect = not cheats_nodetect
+            if buttonid == pygame.K_m: # деньгииииии
+                money += 100
+                sfx_buy.play()
+            if buttonid == pygame.K_d: # урон
+                BattlePlayer_got_hurt(bplayer)
 
 def GlobalCheats_kb_released(target, buttonid):
     target.keys[buttonid] = False
@@ -366,19 +379,28 @@ def MainMenuInstr_mouse_pressed(target, mousepos, buttonid):
     if xrange2 and yrange2:
         target.show = 0
 
+def MainMenuInstr_room_start(target):
+    pygame.mixer.music.load('data/mainmenu.mp3')
+    pygame.mixer.music.play(-1)
+    target.show = 0
+    target.show_step = 0
+    target.gotofield = 0
+    target.gotofield_step = 0
+
 EntMainMenuInstr = engine.Entity(event_create=MainMenuInstr_create, event_step=MainMenuInstr_step,
                                  event_draw_after=MainMenuInstr_draw_after,
-                                 event_mouse_pressed=MainMenuInstr_mouse_pressed)
+                                 event_mouse_pressed=MainMenuInstr_mouse_pressed,
+                                 event_room_start=MainMenuInstr_room_start)
 #endregion
 #region [MAINMENU SETTINGS]
 def MainMenuSettings_create(target):
     target.show = 0
     target.show_step = 0
 
-    target.text1 = font_default.render('Громкость', 0, 'white')
-    target.text2 = font_default.render('Режим отображения', 0, 'white')
-    target.text3 = font_default.render('Оконный режим', 0, 'black')
-    target.text4 = font_default.render('Назад', 0, 'black')
+    target.text1 = font_default.render('Громкость', False, 'white')
+    target.text2 = font_default.render('Режим отображения', False, 'white')
+    target.text3 = font_default.render('Оконный режим', False, 'black')
+    target.text4 = font_default.render('Назад', False, 'black')
 
 def MainMenuSettings_step(target):
     if target.show:
@@ -424,6 +446,7 @@ def MainMenuSettings_draw_after(target, surface: pygame.Surface):
     surface.blit(target.text4, text_coords)
 
 def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
+    global show_mode
     showphase = sin(radians(target.show_step * 90))
 
     fs = 16
@@ -443,7 +466,31 @@ def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
     yrange2 = button2_y - yd <= mousepos[1] <= button2_y + yd
 
     if (xrange1 and yrange1):
-        print('A')
+        if show_mode == 0: # оконный -> полный экран
+            target.text3 = font_default.render('На весь экран', False, 'black')
+            show_mode = 1
+            screen.update_screen(engine.SCREENSIZE, fullscreen_mode=1, resizable_mode=False)
+
+        elif show_mode == 1:  # полный экран -> оконный
+            target.text3 = font_default.render('Оконный режим', False, 'black')
+            show_mode = 0
+            screen.update_screen((16 * scale * pixelscale, 9 * scale * pixelscale), fullscreen_mode=0,
+                                 resizable_mode=True)
+
+        # if show_mode == 0: # оконный -> оконный на весь экран
+        #     target.text3 = font_default.render('Оконный на весь экран', False, 'black')
+        #     show_mode = 1
+        #     screen.update_screen(fullscreen_mode=2, resizable_mode=False)
+        #
+        # elif show_mode == 1: # оконный на весь экран -> полный экран
+        #     target.text3 = font_default.render('На весь экран', False, 'black')
+        #     show_mode = 2
+        #     screen.update_screen(fullscreen_mode=1, resizable_mode=False)
+        #
+        # elif show_mode == 2: # полный экран -> оконный
+        #     target.text3 = font_default.render('Оконный режим', False, 'black')
+        #     show_mode = 0
+        #     screen.update_screen((16*scale*pixelscale, 9*scale*pixelscale), fullscreen_mode=0, resizable_mode=True)
 
     if (xrange2 and yrange2):
         target.show = 0
@@ -495,6 +542,7 @@ def FieldBoard_user0(target, surface: pygame.Surface):
     target.start_y = surface_center_y - (target.height//2)
 
 def FieldBoard_init_level(target): # расположение штук на поле
+    global hp, maxhp
     ucfe = [] # unused_coords_for_enemies - координаты всем и всям уникальные
     for x in range(0, target.cellcount_x):
         for y in range(4, target.cellcount_y-3):
@@ -514,13 +562,15 @@ def FieldBoard_init_level(target): # расположение штук на по
     i.pl_ins = fplayer
     i.myboard = target
     # создать портал
-    i = EntFieldPortal.instance()
-    i.cellx, i.celly = randint(0, target.cellcount_x-1), randint(target.cellcount_y-1-2, target.cellcount_y-1)
-    i.myboard = target
-    i.pl_ins = fplayer
-    # переместить игрока
+    fportal.cellx, fportal.celly = randint(0, target.cellcount_x-1), randint(target.cellcount_y-1-2, target.cellcount_y-1)
+    fportal.gotoshop_step = 0
+    fportal.gotoshop = False
+    # переместить игрока, исцелить
     fplayer.cellx = randint(0, target.cellcount_x-1)
     fplayer.celly = randint(target.cellcount_y-1-2, target.cellcount_y-1)
+    hp = maxhp
+    # надпись цикла
+    target.cycle = font_default.render(f'Цикл {cycle}', False, 'white')
 
 def FieldBoard_create(target):
     target.cellsize = 20
@@ -584,6 +634,7 @@ def FieldBoard_draw_after(target, surface: pygame.Surface):
     phase = sin(radians(min(90, 180 * target.moving_to_battle)))
     draw_text('!', surface, [surface.get_width() // 2, surface.get_height() // 2], round(128 * phase), 'red',
               'yugothic', True)
+    surface.blit(target.cycle, (surface.get_width() - target.cycle.get_width() - 4, 4))
 
 def FieldBoard_room_start(target):
     target.detected = False
@@ -844,6 +895,21 @@ EntFieldPortal = engine.Entity(event_create=FieldPortal_create,
                                event_draw_after=FieldPortal_draw_after)
 #endregion
 #region [BATTLE PLAYER]
+def BattlePlayer_got_hurt(target): # попала пуля(
+    global hp
+    if target.invulner_time <= 0:
+        target.invulner_time = 1
+        if target.armor > 0:
+            target.armor -= 1
+        else:
+            hp -= 1
+        if hp > 0: # осталось >0 хп
+            sfx_hurt.play()
+        else:
+            sfx_death.play()
+            engine.rooms.change_current_room(room_mainmenu)
+    return target.invulner_time <= 0
+
 def BattlePlayer_create(target):
     target.x = 0 # где он щас
     target.y = 0 # где он щас
@@ -898,17 +964,26 @@ def BattlePlayer_step(target):
     target.image_angle //= 2
 
     if target.shooting_delay <= 0:
+        # BattlePlayer_got_hurt(target) # тест
         bullet = EntBattlePlBullet.instance()
         bullet.x = target.x
         bullet.y = target.y - 10
         target.shooting_delay = 1
     else:
-        target.shooting_delay -= UPF(5*shootspeed)
+        target.shooting_delay -= UPF(shootspeed)
+
+    if target.invulner_time > 0:
+        target.invulner_time -= UPF(1)
 
 def BattlePlayer_draw(target, surface: pygame.Surface):
     # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
     myimage = pygame.transform.rotate(target.image, target.image_angle)
-    paint_surface(myimage, (255, 255, 255, 255 - 100*target.invulner_time), pygame.BLEND_RGBA_MULT) # прозрачность!
+    transparency = pygame.Surface(myimage.get_size(), pygame.SRCALPHA)
+    transparency.fill((255, 255, 255, 255 - 150*ceil(target.invulner_time)))
+    myimage.blit(transparency, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    circle = pygame.Surface((myimage.get_width()*4, myimage.get_height()*4), pygame.SRCALPHA)
+    pygame.draw.circle(circle, 'red', (circle.get_width()//2, circle.get_height()//2), 32*target.invulner_time)
+    surface.blit(circle, (target.x - circle.get_width()//2, target.y - circle.get_height()//2))
     surface.blit(myimage, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
 
     mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
@@ -918,9 +993,13 @@ def BattlePlayer_draw(target, surface: pygame.Surface):
     recty = surface.get_height() - recth - 8
     pygame.draw.rect(mysurface, (55, 155, 55), (rectx, recty, rectw, recth)) # макс хп
     pygame.draw.rect(mysurface, (55, 255, 55), (rectx, recty, rectw * (hp / maxhp), recth)) # сколько хп
-    for i in range(1, maxhp):
-        ox = rectw*i/maxhp
-        pygame.draw.line(mysurface, (35, 55, 35), (rectx+ox, recty), (rectx+ox, recty+recth-1)) # делящие палочки
+    if target.armor > 0:
+        pygame.draw.rect(mysurface, (55, 155, 255),
+                         (rectx, recty, rectw * (target.armor / maxhp), recth)) # сколько брони
+    if maxhp < 50:
+        for i in range(1, maxhp):
+            ox = rectw*i/maxhp
+            pygame.draw.line(mysurface, (35, 55, 35), (rectx+ox, recty), (rectx+ox, recty+recth-1)) # делящие палочки
     pygame.draw.rect(mysurface, 'black', (rectx, recty, rectw, recth), 1) # обводка
     mysurface.blit(target.text[0], (surface.get_width() // 2 - target.text[0].get_width() // 2,
                                     recty - target.text[0].get_height() - 4))
@@ -948,6 +1027,7 @@ def BattlePlayer_room_start(target):
     pygame.mixer.music.play(-1)
     target.x, target.y = mylastpos_onfield
     target.image_angle = mylastrot_onfield
+    target.armor = maxarmor
 
 def BattlePlayer_room_end(target):
     global mylastpos_inbattle, mylastrot_inbattle
@@ -965,7 +1045,7 @@ def BattlePlBullet_create(target):
     target.x = 0
     target.y = 0
     target.direction = 90
-    target.speed = UPF(100*bulletspeed)
+    target.speed = UPF(150*bulletspeed)
     target.image = img_bullet_test
     target.mask = mask_bullet
 
@@ -1117,6 +1197,64 @@ EntShopBG = engine.Entity(event_create=ShopBG_create,
                           event_draw_before=ShopBG_draw_before)
 #endregion
 #region [SHOP BUTTON]
+def ShopButton_text0():
+    return ['Увеличивает',
+            'максимальное',
+            'здоровье вашего',
+            'корабля на',
+            '1 ячейку.',
+            f'Сейчас {maxhp} MAXHP.']
+
+def ShopButton_text1():
+    return ['Увеличивает',
+            'частоту стрельбы',
+            'на 50%.',
+            f'Сейчас {int(20*shootspeed)}%.']
+
+def ShopButton_text2():
+    return ['Увеличивает',
+            'количество брони.',
+            'Броня',
+            'восстановляется',
+            'перед каждой',
+            'битвой. Брони не',
+            'может быть больше',
+            'чем макс. здоровье.',
+            f'Сейчас {maxarmor} ARMOR.']
+
+def ShopButton_user0(target): # hp
+    global money, maxhp, hp
+    if money >= target.cost:
+        sfx_buy.play()
+        money -= target.cost
+        maxhp += 1
+        hp += 1
+        target.cost += 15
+    else:
+        sfx_nobuy.play()
+
+
+def ShopButton_user1(target): # shooting speed
+    global money, shootspeed, bulletspeed
+    if money >= target.cost:
+        sfx_buy.play()
+        money -= target.cost
+        shootspeed += 2.5
+        target.cost += 15
+    else:
+        sfx_nobuy.play()
+
+
+def ShopButton_user2(target): # armor
+    global money, maxarmor, maxhp
+    if money >= target.cost and maxarmor < maxhp:
+        sfx_buy.play()
+        money -= target.cost
+        maxarmor += 1
+        target.cost += 15
+    else:
+        sfx_nobuy.play()
+
 def ShopButton_create(target):
     target.x = 0
     target.y = 0
@@ -1124,25 +1262,113 @@ def ShopButton_create(target):
     target.string = "Кнопочка"
     target.font = font_default
     target.text_color = target.color
+    target.press_link = None
+    target.text_link = None
+    target.cost = 0
+
+    target.width = 2 * 64
+    target.height = 3 * 64
 
     instance_render_text(target)
 
 def ShopButton_draw(target, surface: pygame.Surface):
-    width = 2*64
-    height = 3*64
-
     bgcolor = (target.color[0]//2, target.color[1]//2, target.color[2]//2)
 
-    frame_x = target.x - width//2
-    frame_y = target.y - height//2
+    frame_x = target.x - target.width//2
+    frame_y = target.y - target.height//2
 
-    pygame.draw.rect(surface, bgcolor, (frame_x, frame_y, width, height), 0, 10)
-    pygame.draw.rect(surface, target.color, (frame_x, frame_y, width, height), 2, 10)
+    pygame.draw.rect(surface, bgcolor, (frame_x, frame_y, target.width, target.height), 0, 10)
+    pygame.draw.rect(surface, target.color, (frame_x, frame_y, target.width, target.height), 2, 10)
 
     surface.blit(target.text[0], (target.x-target.text[0].get_width()//2, frame_y+8))
 
+    cost = font_default.render(str(target.cost), False, 'white')
+
+    surface.blit(cost, (target.x - cost.get_width()//2 - 1 - img_credit.get_width()//2, frame_y + target.height - 16))
+    surface.blit(img_credit, (target.x + cost.get_width()//2 + 1 - img_credit.get_width()//2, frame_y + target.height - 16 + 4))
+
+    if target.text_link is not None:
+        lh = 16 # line height
+        text = target.text_link()
+        oy = frame_y + target.height - (lh*len(text)) - 32
+        for line in text:
+            oy += lh
+            linerender = font_small.render(line, False, target.color)
+            surface.blit(linerender, (target.x - linerender.get_width()//2, oy))
+
+
+def ShopButton_mouse_pressed(target, mousepos, buttonid):
+    xrange = target.x - target.width//2 <= mousepos[0] <= target.x + target.width//2
+    yrange = target.y - target.height//2 <= mousepos[1] <= target.y + target.height//2
+
+    if (xrange and yrange) and (target.press_link is not None):
+        target.press_link(target)
+
 EntShopButton = engine.Entity(event_create=ShopButton_create,
-                              event_draw=ShopButton_draw)
+                              event_draw=ShopButton_draw,
+                              event_mouse_pressed=ShopButton_mouse_pressed)
+#endregion
+#region [SHOP CONTINUE]
+def ShopContinue_create(target):
+    target.x, target.y = 0, 0
+    target.font = font_default
+    target.string = 'Следующий цикл'
+    target.text_color = 'black'
+    instance_render_text(target)
+
+    target.gotofield = 0
+    target.gotofield_step = 0
+
+def ShopContinue_step(target):
+    if target.gotofield:
+        if target.gotofield_step < 1:
+            target.gotofield_step += UPF(1/2)
+        else:
+            FieldBoard_init_level(fboard)
+            engine.rooms.change_current_room(room_field)
+
+def ShopContinue_draw(target, surface: pygame.Surface):
+    tw = target.text[0].get_width()
+    th = target.text[0].get_height()
+    fs = 16  # размер поля между прямоугольником и текстом
+    rect_coords = (target.x - ((tw + fs) // 2), target.y - ((th + fs) // 2), tw + fs, th + fs)
+    text_coords = (target.x - (tw // 2), target.y - (th // 2))
+    rounding = 4  # величина скругления задника
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text[0], text_coords)
+
+def ShopContinue_draw_after(target, surface: pygame.Surface):
+    width, height = surface.get_size()
+
+    half_diagonal = (((width ** 2) + (height ** 2)) ** 0.5) / 2
+    circle_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface2 = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    circle_surface.fill('black')
+    pygame.draw.circle(circle_surface2, 'black', (width / 2, height / 2),
+                       half_diagonal * (max(0, 1.4 * (1 - target.gotofield_step) - 0.4)), 0)
+    circle_surface.blit(circle_surface2, (0, 0), None, pygame.BLEND_RGBA_SUB)
+    surface.blit(circle_surface, (0, 0), None)
+
+def ShopContinue_mouse_pressed(target, mousepos, buttonid):
+    tw = target.text[0].get_width()
+    th = target.text[0].get_height()
+    fs = 16  # размер поля между прямоугольником и текстом
+    xrange = target.x - ((tw + fs) // 2) <= mousepos[0] <= target.x + ((tw + fs) // 2)
+    yrange = target.y - ((th + fs) // 2) <= mousepos[1] <= target.y + ((th + fs) // 2)
+    if xrange and yrange and not target.gotofield: target.gotofield = 1
+
+def ShopContinue_room_start(target):
+    target.gotofield = 0
+    target.gotofield_step = 0
+
+
+EntShopContinue = engine.Entity(event_create=ShopContinue_create,
+                                event_step=ShopContinue_step,
+                                event_draw=ShopContinue_draw,
+                                event_draw_after=ShopContinue_draw_after,
+                                event_mouse_pressed=ShopContinue_mouse_pressed,
+                                event_room_start=ShopContinue_room_start)
 #endregion
 #endregion
 
@@ -1158,10 +1384,10 @@ room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFiel
 room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet,
                            EntBattleEnemy, EntBattleEnBullet])
 
-room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton])
+room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton, EntShopContinue])
 
-engine.rooms.change_current_room(room_mainmenu)
-#engine.rooms.change_current_room(room_shop)
+#engine.rooms.change_current_room(room_mainmenu)
+engine.rooms.change_current_room(room_shop)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
@@ -1238,6 +1464,10 @@ bg2.image = img_bg
 fplayer = EntFieldPlayer.instance()
 fplayer.myboard = fboard
 
+fportal = EntFieldPortal.instance()
+fportal.pl_ins = fplayer
+fportal.myboard = fboard
+
 # fenemytest = EntFieldEnemy.instance()
 # fenemytest.myboard = fboard
 # fenemytest.pl_ins = fplayer
@@ -1260,6 +1490,9 @@ shopbutton1.string = '+1 МАКС ХП'
 shopbutton1.text_color = shopbutton1.color
 shopbutton1.x = screen.get_canvas_halfwidth()
 shopbutton1.y = screen.get_canvas_halfheight()
+shopbutton1.cost = 10
+shopbutton1.press_link = ShopButton_user0
+shopbutton1.text_link = ShopButton_text0
 instance_render_text(shopbutton1)
 
 shopbutton2 = EntShopButton.instance()
@@ -1268,6 +1501,9 @@ shopbutton2.string = 'СКР СТРЕЛЬБ'
 shopbutton2.text_color = shopbutton2.color
 shopbutton2.x = screen.get_canvas_halfwidth() - 160
 shopbutton2.y = screen.get_canvas_halfheight()
+shopbutton2.cost = 10
+shopbutton2.press_link = ShopButton_user1
+shopbutton2.text_link = ShopButton_text1
 instance_render_text(shopbutton2)
 
 shopbutton3 = EntShopButton.instance()
@@ -1276,7 +1512,14 @@ shopbutton3.string = '+1 БРОНЯ'
 shopbutton3.text_color = shopbutton3.color
 shopbutton3.x = screen.get_canvas_halfwidth() + 160
 shopbutton3.y = screen.get_canvas_halfheight()
+shopbutton3.cost = 40
+shopbutton3.press_link = ShopButton_user2
+shopbutton3.text_link = ShopButton_text2
 instance_render_text(shopbutton3)
+
+shopcontinue = EntShopContinue.instance()
+shopcontinue.x = screen.get_canvas_halfwidth()
+shopcontinue.y = screen.get_canvas_height() - 24
 #endregion
 
 #region [КОНСТАНТЫ, ПЕРЕМЕННЫЕ И Т.Д.]
@@ -1293,15 +1536,18 @@ hp = 6
 maxarmor = 0
 abilityid = 0
 bulletdamage = 1
-shootspeed = 1
+shootspeed = 5
 bulletspeed = 2
 
 enemyid = 0
 enemyname = ['MIM Lighter 5', 'KLICH-Sh Shadow', 'ULTIMATA VII', 'Mnvr K5', 'VSTK SiegeEye \'88', 'BFG-ZBS M33 "Небесный"']
 killedboss = False
+cycle = 1
 
 cheats_enabled = False # читы для разработчика
 cheats_nodetect = False # никто не замечает игрока
+
+show_mode = 0 # режим отображения окна
 #endregion
 
 #region [ГЛАВНЫЙ ЦИКЛ]
