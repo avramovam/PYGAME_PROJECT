@@ -32,8 +32,8 @@ img_player_battle = engine.load_image('player_battle.png')
 mask_player_battle = pygame.mask.from_surface(img_player_battle)
 img_board_enemy0 = engine.load_image('board_enemy0.png')
 img_board_enemy1 = engine.load_image('board_enemy1.png')
-img_bullet_test = engine.load_image('bullet_test.png')
-mask_bullet = pygame.mask.from_surface(img_bullet_test)
+img_bullet_player = engine.load_image('bullet_player.png')
+mask_bullet = pygame.mask.from_surface(img_bullet_player)
 
 img_boss = engine.load_image('boss.png')
 mask_boss = pygame.mask.from_surface(img_boss)
@@ -696,10 +696,8 @@ def FieldPlayer_create(target):
                         target.image.get_at((x2, yc)).a +
                         target.image.get_at((xc, y1)).a +
                         target.image.get_at((xc, y2)).a):  # есть соседние
-                    p = pygame.Color(255, 255, 255, 255)
+                    p = pygame.Color(205, 205, 255, 205)
             p = target.modded_image.set_at((x, y), p)
-
-    target.image = target.modded_image
 
 def FieldPlayer_step(target):
     if target.myboard is not None:
@@ -1073,7 +1071,7 @@ def BattlePlayer_create(target):
                         target.image.get_at((x2, yc)).a +
                         target.image.get_at((xc, y1)).a +
                         target.image.get_at((xc, y2)).a):  # есть соседние
-                    p = pygame.Color(255, 255, 255, 255)
+                    p = pygame.Color(205, 205, 255, 205)
             p = target.modded_image.set_at((x, y), p)
 
 def BattlePlayer_step(target):
@@ -1105,14 +1103,15 @@ def BattlePlayer_step(target):
     target.x = engine.clamp(target.x, 16, screen.get_canvas_width() - 16)
     target.y = engine.clamp(target.y, 16, screen.get_canvas_height() - 16)
 
-    if target.shooting_delay <= 0:
-        # BattlePlayer_got_hurt(target) # тест
-        bullet = EntBattlePlBullet.instance()
-        bullet.x = target.x
-        bullet.y = target.y - 10
-        target.shooting_delay = 1
-    else:
-        target.shooting_delay -= UPF(shootspeed)
+    if benemy.hp > 0:
+        if target.shooting_delay <= 0:
+            # BattlePlayer_got_hurt(target) # тест
+            bullet = EntBattlePlBullet.instance()
+            bullet.x = target.x
+            bullet.y = target.y - 10
+            target.shooting_delay = 1
+        else:
+            target.shooting_delay -= UPF(shootspeed)
 
     if target.invulner_time > 0:
         target.invulner_time -= UPF(1)
@@ -1189,7 +1188,7 @@ def BattlePlBullet_create(target):
     target.y = 0
     target.direction = 90
     target.speed = UPF(150*bulletspeed)
-    target.image = img_bullet_test
+    target.image = img_bullet_player
     target.mask = mask_bullet
 
 def BattlePlBullet_step(target):
@@ -1203,7 +1202,7 @@ def BattlePlBullet_step(target):
 def BattlePlBullet_step_after(target):
     if target in EntBattlePlBullet.instances:
         if target.mask.overlap(benemy.mask, (
-        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)):  # попал в противника
+        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)) or benemy.hp <= 0:
             del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
 
 def BattlePlBullet_draw(target, surface: pygame.Surface):
@@ -1307,7 +1306,7 @@ def BattleEnemy_draw_after(target, surface: pygame.Surface):
     surface.blit(mysurface, (0, 0))
 
 def BattleEnemy_room_start(target):
-    print(enemyid)
+    #print(enemyid)
     if enemyid == 5: # босс / Небесный
         target.image = img_boss
         target.mask = mask_boss
