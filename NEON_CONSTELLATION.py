@@ -34,10 +34,14 @@ img_board_enemy0 = engine.load_image('board_enemy0.png')
 img_board_enemy1 = engine.load_image('board_enemy1.png')
 img_bullet_test = engine.load_image('bullet_test.png')
 mask_bullet = pygame.mask.from_surface(img_bullet_test)
+
 img_boss = engine.load_image('boss.png')
 mask_boss = pygame.mask.from_surface(img_boss)
-img_enemy0_idle = engine.load_image('enemy0_idle.png')
-mask_enemy0 = pygame.mask.from_surface(img_enemy0_idle)
+img_enemy0 = engine.load_image('enemy0_idle.png')
+mask_enemy0 = pygame.mask.from_surface(img_enemy0)
+img_enemy1 = engine.load_image('enemy1_idle.png')
+mask_enemy1 = pygame.mask.from_surface(img_enemy1)
+
 img_instructions = engine.load_image('instructions.png')
 img_objective = engine.load_image('objective.png')
 img_portal = engine.load_image('portal.png')
@@ -547,14 +551,16 @@ def FieldBoard_init_level(target): # расположение штук на по
     for x in range(0, target.cellcount_x):
         for y in range(4, target.cellcount_y-3):
             ucfe.append((x, y))
-    # создать 5 противников
-    for j in range(2):
+    # создать 7 противников
+    for j in range(7):
         i = EntFieldEnemy.instance()
         i.cellx, i.celly = ucfe.pop(randint(0, len(ucfe)-1))
-        i.enemyid = 0
+        i.enemyid = randint(0, 4)
         i.pl_ins = fplayer
-        i.detect_method = (FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0)[i.enemyid-1]
-        i.image = (img_board_enemy0, img_board_enemy0, img_board_enemy0, img_board_enemy0)[i.enemyid-1]
+        i.detect_method = (FieldEnemy_detect0, FieldEnemy_detect0,
+                           FieldEnemy_detect0, FieldEnemy_detect0, FieldEnemy_detect0)[i.enemyid]
+        i.image = (img_board_enemy0, img_board_enemy1,
+                   img_board_enemy0, img_board_enemy1, img_board_enemy0)[i.enemyid]
         i.myboard = target
     # создать босса
     i = EntFieldBoss.instance()
@@ -702,18 +708,26 @@ def FieldPlayer_kb_pressed(target, buttonid):
             target.cellx = engine.clamp(target.cellx - 1, 0, target.myboard.cellcount_x-1)
             target.nextcellx = target.cellx - 1
             target.nextcelly = target.celly
+            for ins in EntFieldEnemy.instances:
+                ins.detect_phase = (ins.detect_phase + 1) % 4
         elif buttonid == pygame.K_RIGHT:
             target.cellx = engine.clamp(target.cellx + 1, 0, target.myboard.cellcount_x-1)
             target.nextcellx = target.cellx + 1
             target.nextcelly = target.celly
+            for ins in EntFieldEnemy.instances:
+                ins.detect_phase = (ins.detect_phase + 1) % 4
         elif buttonid == pygame.K_UP:
             target.celly = engine.clamp(target.celly - 1, 0, target.myboard.cellcount_y-1)
             target.nextcellx = target.cellx
             target.nextcelly = target.celly - 1
+            for ins in EntFieldEnemy.instances:
+                ins.detect_phase = (ins.detect_phase + 1) % 4
         elif buttonid == pygame.K_DOWN:
             target.celly = engine.clamp(target.celly + 1, 0, target.myboard.cellcount_y-1)
             target.nextcellx = target.cellx
             target.nextcelly = target.celly + 1
+            for ins in EntFieldEnemy.instances:
+                ins.detect_phase = (ins.detect_phase + 1) % 4
 
 def FieldPlayer_room_start(target):
     pygame.mixer.music.load('data/onfield.mp3')
@@ -733,8 +747,18 @@ EntFieldPlayer = engine.Entity(event_create=FieldPlayer_create, event_step=Field
                                event_room_end=FieldPlayer_room_end)
 #endregion
 #region [FIELD ENEMY]
-def FieldEnemy_detect0(myx, myy, playerx, playery): # тестовый вариант - крест
+def FieldEnemy_detect_test(target, myx, myy, playerx, playery, phase): # тестовый вариант - крест
     return (myx == playerx) or (myy == playery)
+
+def FieldEnemy_detect0(myx, myy, playerx, playery, phase): # тестовый вариант - крест
+    if phase == 0:
+        return (myx == playerx) and (myy <= playery)
+    elif phase == 1:
+        return (myx >= playerx) and (myy == playery)
+    elif phase == 2:
+        return (myx == playerx) and (myy >= playery)
+    elif phase == 3:
+        return (myx <= playerx) and (myy == playery)
 
 
 def FieldEnemy_create(target):
@@ -754,6 +778,7 @@ def FieldEnemy_create(target):
        когда fieldenemy на координатах (myx;myy))'''
     target.enemyid = 1
     '''    ^^^^^^^   сие ID вражеского корабля, с которым игрок вступает в бой при обнаружении игрока'''
+    target.detect_phase = 0
     target.pl_ins = None # instance-экземпляр игрока
 
 def FieldEnemy_step(target):
@@ -773,7 +798,9 @@ def FieldEnemy_step(target):
 
     if (target.myboard is not None) and (target.myboard.detected != True) and \
        (target.detect_method is not None) and (target.pl_ins is not None) and (not cheats_nodetect):
-        if target.detect_method(target.cellx, target.celly, target.pl_ins.cellx, target.pl_ins.celly):
+        if target.detect_method(target.cellx, target.celly,
+                                target.pl_ins.cellx, target.pl_ins.celly,
+                                target.detect_phase):
             target.myboard.detected = True # НАС АБНАРУЖИЛИ!!!!!!1
             enemyid = target.enemyid # НАС ЩАС УБИВАТЬ БУДУТ!!!1
             whodetected = target
@@ -787,7 +814,7 @@ def FieldEnemy_draw(target, surface: pygame.Surface):
         ox, oy = target.myboard.start_x + 1, target.myboard.start_y + 1
         for cx in range(target.myboard.cellcount_x):
             for cy in range(target.myboard.cellcount_y):
-                if target.detect_method(target.cellx, target.celly, cx, cy):
+                if target.detect_method(target.cellx, target.celly, cx, cy, target.detect_phase):
                     pygame.draw.rect(mysurface, (255,0,0,55), (ox, oy, cs, cs))
                 oy += cs + 1
             ox += cs + 1
@@ -1077,7 +1104,7 @@ EntBattlePlBullet = engine.Entity(event_create=BattlePlBullet_create,
 #endregion
 #region [BATTLE ENEMY]
 def BattleEnemy_create(target):
-    target.image = img_enemy0_idle
+    target.image = img_enemy0
     target.x = 0
     target.y = 0
     target.posphase = 0
@@ -1155,7 +1182,19 @@ def BattleEnemy_room_start(target):
         target.image = img_boss
         target.mask = mask_boss
     elif enemyid == 0: # синий
-        target.image = img_enemy0_idle
+        target.image = img_enemy0
+        target.mask = mask_enemy0
+    elif enemyid == 1: # черный
+        target.image = img_enemy1
+        target.mask = mask_enemy1
+    elif enemyid == 2: # ???
+        target.image = img_enemy0
+        target.mask = mask_enemy0
+    elif enemyid == 3: # ???
+        target.image = img_enemy1
+        target.mask = mask_enemy1
+    elif enemyid == 4: # ???
+        target.image = img_enemy0
         target.mask = mask_enemy0
     target.string = enemyname[enemyid]
     instance_render_text(target)
@@ -1386,8 +1425,8 @@ room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBat
 
 room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton, EntShopContinue])
 
-#engine.rooms.change_current_room(room_mainmenu)
-engine.rooms.change_current_room(room_shop)
+engine.rooms.change_current_room(room_mainmenu)
+#engine.rooms.change_current_room(room_shop)
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
