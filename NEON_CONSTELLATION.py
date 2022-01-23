@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #17
-    Daria Stolyarova                                                                              23.01.2022
+    Andrey Avramov                                                                                       #18
+    Daria Stolyarova                                                                              24.01.2022
 ''')
 
 pygame.init()
@@ -555,7 +555,7 @@ def FieldBoard_user0(target, surface: pygame.Surface):
     target.start_y = surface_center_y - (target.height//2)
 
 def FieldBoard_init_level(target): # расположение штук на поле
-    global hp, maxhp
+    global hp, maxhp, killedboss
     ucfe = [] # unused_coords_for_enemies - координаты всем и всям уникальные
     for x in range(0, target.cellcount_x):
         for y in range(4, target.cellcount_y-3):
@@ -588,6 +588,8 @@ def FieldBoard_init_level(target): # расположение штук на по
     hp = maxhp
     # надпись цикла
     target.cycle = font_default.render(f'Цикл {cycle}', False, 'white')
+
+    killedboss = False
 
 def FieldBoard_create(target):
     target.cellsize = 20
@@ -675,6 +677,30 @@ def FieldPlayer_create(target):
     target.image_angle = 0
     target.myboard = None
 
+    target.modded_image = pygame.Surface((target.image.get_width() + 2, target.image.get_height() + 2), pygame.SRCALPHA)
+    width, height = target.modded_image.get_size()
+    for x in range(width):
+        for y in range(height):
+            if 1 <= x < width - 1 and 1 <= y < height - 1:  # брать ли пиксель у картинки?
+                p = target.image.get_at((x - 1, y - 1))  # да, чебнет
+            else:
+                p = pygame.Color(0, 0, 0, 0)  # нет, он за пределами картинки, берем пустой
+            if p.a == 0:
+                x1 = max(0, x - 2)
+                x2 = min(width - 3, x)
+                xc = engine.clamp(0, x - 1, width - 3)
+                y1 = max(0, y - 2)
+                y2 = min(height - 3, y)
+                yc = engine.clamp(0, y - 1, height - 3)
+                if (target.image.get_at((x1, yc)).a +
+                        target.image.get_at((x2, yc)).a +
+                        target.image.get_at((xc, y1)).a +
+                        target.image.get_at((xc, y2)).a):  # есть соседние
+                    p = pygame.Color(255, 255, 255, 255)
+            p = target.modded_image.set_at((x, y), p)
+
+    target.image = target.modded_image
+
 def FieldPlayer_step(target):
     if target.myboard is not None:
         target.xto, target.yto = FieldBoard_get_cell_coords(target.myboard, target.cellx, target.celly) # получение left-top-края
@@ -702,7 +728,7 @@ def FieldPlayer_step(target):
                                                     target.nextcellx, target.nextcelly) - 90
 
 def FieldPlayer_draw(target, surface: pygame.Surface):
-    myimage = pygame.transform.rotate(target.image, target.image_angle)
+    myimage = pygame.transform.rotate(target.modded_image, target.image_angle)
     myimage_width = myimage.get_width()
     myimage_height = myimage.get_height()
     deltawidth = myimage_width - target.myboard.cellsize
@@ -873,7 +899,15 @@ def FieldEnemy_draw(target, surface: pygame.Surface):
             ox += cs + 1
             oy = target.myboard.start_y + 1
     surface.blit(mysurface, (0,0))
-    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
+
+    myimage = pygame.transform.rotate(target.image, target.image_angle)
+    myimage_width = myimage.get_width()
+    myimage_height = myimage.get_height()
+    deltawidth = myimage_width - target.myboard.cellsize
+    deltaheight = myimage_height - target.myboard.cellsize
+    surface.blit(myimage,
+                 (target.x - deltawidth//2 + 1,
+                  target.y - deltaheight//2 + 1))
 
 def FieldEnemy_room_start(target):
     if whodetected == target:
@@ -906,7 +940,14 @@ def FieldBoss_step(target):
             whodetected = target
 
 def FieldBoss_draw(target, surface: pygame.Surface):
-    FieldPlayer_draw(target, surface) # отрисовка идентична отрисовке игрока
+    myimage = pygame.transform.rotate(target.image, target.image_angle)
+    myimage_width = myimage.get_width()
+    myimage_height = myimage.get_height()
+    deltawidth = myimage_width - target.myboard.cellsize
+    deltaheight = myimage_height - target.myboard.cellsize
+    surface.blit(myimage,
+                 (target.x - deltawidth//2 + 1,
+                  target.y - deltaheight//2 + 1))
     mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     # далее подсветка клеток, которые входят в поле обнаружения
     if (target.myboard is not None):
@@ -1013,6 +1054,28 @@ def BattlePlayer_create(target):
     target.text_color = 'white'
     instance_render_text(target)
 
+    target.modded_image = pygame.Surface((target.image.get_width() + 2, target.image.get_height() + 2), pygame.SRCALPHA)
+    width, height = target.modded_image.get_size()
+    for x in range(width):
+        for y in range(height):
+            if 1 <= x < width - 1 and 1 <= y < height - 1:  # брать ли пиксель у картинки?
+                p = target.image.get_at((x - 1, y - 1))  # да, чебнет
+            else:
+                p = pygame.Color(0, 0, 0, 0)  # нет, он за пределами картинки, берем пустой
+            if p.a == 0:
+                x1 = max(0, x - 2)
+                x2 = min(width - 3, x)
+                xc = engine.clamp(0, x - 1, width - 3)
+                y1 = max(0, y - 2)
+                y2 = min(height - 3, y)
+                yc = engine.clamp(0, y - 1, height - 3)
+                if (target.image.get_at((x1, yc)).a +
+                        target.image.get_at((x2, yc)).a +
+                        target.image.get_at((xc, y1)).a +
+                        target.image.get_at((xc, y2)).a):  # есть соседние
+                    p = pygame.Color(255, 255, 255, 255)
+            p = target.modded_image.set_at((x, y), p)
+
 def BattlePlayer_step(target):
     horizontal_moving = target.keys['right']-target.keys['left']
     vertical_moving = target.keys['down']-target.keys['up']
@@ -1042,8 +1105,6 @@ def BattlePlayer_step(target):
     target.x = engine.clamp(target.x, 16, screen.get_canvas_width() - 16)
     target.y = engine.clamp(target.y, 16, screen.get_canvas_height() - 16)
 
-    target.image_angle //= 2
-
     if target.shooting_delay <= 0:
         # BattlePlayer_got_hurt(target) # тест
         bullet = EntBattlePlBullet.instance()
@@ -1058,14 +1119,16 @@ def BattlePlayer_step(target):
 
 def BattlePlayer_draw(target, surface: pygame.Surface):
     # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
-    myimage = pygame.transform.rotate(target.image, target.image_angle)
-    transparency = pygame.Surface(myimage.get_size(), pygame.SRCALPHA)
-    transparency.fill((255, 255, 255, 255 - 150*ceil(target.invulner_time)))
-    myimage.blit(transparency, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    transparency = 255 - 150*ceil(target.invulner_time)
+
+    myimage = pygame.Surface(target.modded_image.get_size(), pygame.SRCALPHA)
+    myimage.blit(target.modded_image, (0, 0))
+    myimage.fill((255, 255, 255, transparency), special_flags=pygame.BLEND_RGBA_MULT)
+
     circle = pygame.Surface((myimage.get_width()*4, myimage.get_height()*4), pygame.SRCALPHA)
     pygame.draw.circle(circle, 'red', (circle.get_width()//2, circle.get_height()//2), 32*target.invulner_time)
     surface.blit(circle, (target.x - circle.get_width()//2, target.y - circle.get_height()//2))
-    surface.blit(myimage, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
+    surface.blit(myimage, (target.x - myimage.get_width()//2, target.y - myimage.get_height()//2))
 
     mysurface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     rectw = 128
@@ -1106,14 +1169,13 @@ def BattlePlayer_room_start(target):
                    'left': False} # на всякий сбрашиваем клавишы
     pygame.mixer.music.load('data/fight.mp3')
     pygame.mixer.music.play(-1)
-    target.x, target.y = mylastpos_onfield
-    target.image_angle = mylastrot_onfield
+    target.x, target.y = screen.get_canvas_halfwidth(), screen.get_canvas_halfheight() + 128
     target.armor = maxarmor
 
 def BattlePlayer_room_end(target):
     global mylastpos_inbattle, mylastrot_inbattle
     mylastpos_inbattle = target.x, target.y
-    mylastrot_inbattle = target.image_angle
+    mylastrot_inbattle = 90
 
 EntBattlePlayer = engine.Entity(event_create=BattlePlayer_create, event_step=BattlePlayer_step,
                                 event_draw=BattlePlayer_draw,
