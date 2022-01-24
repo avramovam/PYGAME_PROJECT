@@ -1373,6 +1373,41 @@ EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=Battl
                                event_room_start=BattleEnemy_room_start)
 #endregion
 #region [BATTLE EN BULLET]
+
+def BattleElBullet_create(target):
+    global p_pos_x, p_pos_y, e_pos_x, e_pos_y
+    target.x = 0
+    target.y = 0
+    target.direction = get_direction(e_pos_x, e_pos_y, p_pos_x, p_pos_y)
+    target.speed = UPF(100*bulletspeed)
+    target.image = img_bullet_test
+    target.mask = mask_bullet
+
+def BattleElBullet_step(target):
+    target.x += engine.lengthdir_x(target.speed, target.direction)
+    target.y += engine.lengthdir_y(target.speed, target.direction)
+
+    if (not (0-16 < target.x < screen.get_canvas_width()+16)) or \
+       (not (0-16 < target.y < screen.get_canvas_height()+16)): # за пределами экрана
+        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)] # самоуничтожение
+
+def BattleElBullet_step_after(target):
+    if target in EntBattlePlBullet.instances:
+        if target.mask.overlap(benemy.mask, (
+        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)):  # попал в противника
+            del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+
+def BattleElBullet_draw(target, surface: pygame.Surface):
+    surface.blit(target.image, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
+
+def BattleElBullet_room_end(target):
+    if target in EntBattlePlBullet.instances:
+        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+
+EntBattleElBullet = engine.Entity(event_create=BattleElBullet_create,
+                                  event_step=BattleElBullet_step, event_step_after=BattleElBullet_step_after,
+                                  event_draw=BattleElBullet_draw,
+                                  event_room_end=BattleElBullet_room_end)
 EntBattleEnBullet = engine.Entity()
 #endregion
 #region [BATTLE CREDITS]
