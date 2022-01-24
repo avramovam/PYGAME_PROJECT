@@ -591,6 +591,9 @@ def FieldBoard_init_level(target): # расположение штук на по
 
     killedboss = False
 
+    benemy.attack_speed += 0.5
+    benemy.attack_maxtimes += 2
+
 def FieldBoard_create(target):
     target.cellsize = 20
     target.cellcount_x = 15
@@ -1243,6 +1246,16 @@ def BattleEnemy_create(target):
     target.gotofield_step = 0
     target.created_credits = False
 
+    target.attack_type = 0 # тип атаки
+    target.attack_speed = 1 # скорость увеличения фазы атаки (см. далее), меняется в каждом цикле
+    target.attack_phase = 0 # фаза атаки (удобно для всяких своих направлений пулек) - равно 0..1
+    target.attack_times = 0 # сколько раз повторяется тип атаки
+    target.attack_maxtimes = 4 # макс повторов
+    # target.attack_phase += UPF(target.attack_speed) каждый кадр.
+    # target.attack_phase проходит с 0 до 1 за (1/target.attack_speed) секунд.
+    # когда target.attack_phase >= 1, target.attack_phase = 0 и target.attack_tims -= 1
+    # когда target.attack_times == 0, target.attack_type сменяется и target.attack_times = target.attack_maxtimes
+
 def BattleEnemy_step(target):
     global killedboss
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
@@ -1277,6 +1290,20 @@ def BattleEnemy_step(target):
         else:
             target.gotofield_step += UPF(1/4)
 
+def BattleEnemy_step_after(target):
+    if target.attack_times == 0:
+        target.attack_type = randint(0, 0)
+        target.attack_times = target.attack_maxtimes
+    target.attack_phase += UPF(target.attack_speed)
+
+    # типы атак
+    if target.attack_type == 0:
+        pass
+
+    if target.attack_phase >= 1:
+        target.attack_times -= 1
+        target.attack_phase = 0
+
 def BattleEnemy_draw(target, surface: pygame.Surface):
     if target.hp <= 0:
         ang = int(target.gotofield_step * len(target.points))
@@ -1306,6 +1333,11 @@ def BattleEnemy_draw_after(target, surface: pygame.Surface):
     surface.blit(mysurface, (0, 0))
 
 def BattleEnemy_room_start(target):
+    target.attack_type = 0
+    # target.attack_speed = 1
+    target.attack_phase = 0
+    target.attack_times = 0
+
     #print(enemyid)
     if enemyid == 5: # босс / Небесный
         target.image = img_boss
@@ -1336,6 +1368,7 @@ def BattleEnemy_room_start(target):
     target.created_credits = False
 
 EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=BattleEnemy_step,
+                               event_step_after=BattleEnemy_step_after,
                                event_draw=BattleEnemy_draw, event_draw_after=BattleEnemy_draw_after,
                                event_room_start=BattleEnemy_room_start)
 #endregion
