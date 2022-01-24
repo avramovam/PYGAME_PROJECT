@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #18
+    Andrey Avramov                                                                                       #21
     Daria Stolyarova                                                                              24.01.2022
 ''')
 
@@ -33,7 +33,9 @@ mask_player_battle = pygame.mask.from_surface(img_player_battle)
 img_board_enemy0 = engine.load_image('board_enemy0.png')
 img_board_enemy1 = engine.load_image('board_enemy1.png')
 img_bullet_player = engine.load_image('bullet_player.png')
-mask_bullet = pygame.mask.from_surface(img_bullet_player)
+mask_bullet_player = pygame.mask.from_surface(img_bullet_player)
+img_bullet_enemy = engine.load_image('bullet_enemy.png')
+mask_bullet_enemy = pygame.mask.from_surface(img_bullet_enemy)
 
 img_boss = engine.load_image('boss.png')
 mask_boss = pygame.mask.from_surface(img_boss)
@@ -593,6 +595,7 @@ def FieldBoard_init_level(target): # расположение штук на по
 
     benemy.attack_speed += 0.5
     benemy.attack_maxtimes += 2
+    benemy.maxshootdelay = max(2, benemy.maxshootdelay-2)
 
 def FieldBoard_create(target):
     target.cellsize = 20
@@ -1042,7 +1045,7 @@ def BattlePlayer_create(target):
                    'down': False,
                    'right': False,
                    'left': False}
-    target.maxspeed = UPF(128)
+    target.maxspeed = UPF(128+64)
     target.friction = target.maxspeed*UPF(10) # разгоняется за десятую секунды (наверное)
     target.hsp = 0
     target.vsp = 0
@@ -1119,6 +1122,10 @@ def BattlePlayer_step(target):
     if target.invulner_time > 0:
         target.invulner_time -= UPF(1)
 
+    for bullet in EntBattleElBullet.instances:
+        if target.mask.overlap(mask_bullet_enemy, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
+            BattlePlayer_got_hurt(target)
+
 def BattlePlayer_draw(target, surface: pygame.Surface):
     # print(target.x, target.y, target.x + target.image.get_width()//2, target.y + target.image.get_height()//2)
     transparency = 255 - 150*ceil(target.invulner_time)
@@ -1192,7 +1199,7 @@ def BattlePlBullet_create(target):
     target.direction = 90
     target.speed = UPF(150*bulletspeed)
     target.image = img_bullet_player
-    target.mask = mask_bullet
+    target.mask = mask_bullet_player
 
 def BattlePlBullet_step(target):
     target.x += engine.lengthdir_x(target.speed, target.direction)
@@ -1251,6 +1258,8 @@ def BattleEnemy_create(target):
     target.attack_phase = 0 # фаза атаки (удобно для всяких своих направлений пулек) - равно 0..1
     target.attack_times = 0 # сколько раз повторяется тип атаки
     target.attack_maxtimes = 4 # макс повторов
+    target.shootdelay = 60 # стреляет 1 пулю каждые N кадров
+    target.maxshootdelay = 32 # стреляяяяять
     # target.attack_phase += UPF(target.attack_speed) каждый кадр.
     # target.attack_phase проходит с 0 до 1 за (1/target.attack_speed) секунд.
     # когда target.attack_phase >= 1, target.attack_phase = 0 и target.attack_tims -= 1
@@ -1266,7 +1275,7 @@ def BattleEnemy_step(target):
     target.posphase = (target.posphase + UPF(15)) % 360
 
     for bullet in EntBattlePlBullet.instances:
-        if target.mask.overlap(mask_bullet, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
+        if target.mask.overlap(mask_bullet_player, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
             target.hp -= bulletdamage
             if target.hp <= 0 and not target.created_credits:
                 target.created_credits = True
@@ -1291,18 +1300,31 @@ def BattleEnemy_step(target):
             target.gotofield_step += UPF(1/4)
 
 def BattleEnemy_step_after(target):
-    if target.attack_times == 0:
-        target.attack_type = randint(0, 0)
-        target.attack_times = target.attack_maxtimes
-    target.attack_phase += UPF(target.attack_speed)
+    if target.hp > 0:
+        sinphase = sin(32*radians(target.attack_phase))
+        # типы атак
+        if target.shootdelay == 0:
+            if target.attack_type == 0:
+                i = EntBattleElBullet.instance()
+                i.direction = engine.point_direction(benemy.x, benemy.y, bplayer.x, bplayer.y)
+                i.x, i.y = benemy.x, benemy.y
+            if target.attack_type == 1:
+                for a in range(-1, 1+1):
+                    i = EntBattleElBullet.instance()
+                    i.direction = 270 + 45*a
+                    i.x, i.y = benemy.x, benemy.y
+            target.shootdelay = target.maxshootdelay
+        else:
+            target.shootdelay -= 1
 
-    # типы атак
-    if target.attack_type == 0:
-        pass
-
-    if target.attack_phase >= 1:
-        target.attack_times -= 1
-        target.attack_phase = 0
+        if target.attack_times == 0:
+            target.shootdelay = 60
+            target.attack_type = randint(0, 1)
+            target.attack_times = target.attack_maxtimes
+        target.attack_phase += UPF(target.attack_speed)
+        if target.attack_phase >= 1:
+            target.attack_times -= 1
+            target.attack_phase = 0
 
 def BattleEnemy_draw(target, surface: pygame.Surface):
     if target.hp <= 0:
@@ -1373,15 +1395,13 @@ EntBattleEnemy = engine.Entity(event_create=BattleEnemy_create, event_step=Battl
                                event_room_start=BattleEnemy_room_start)
 #endregion
 #region [BATTLE EN BULLET]
-
 def BattleElBullet_create(target):
-    global p_pos_x, p_pos_y, e_pos_x, e_pos_y
     target.x = 0
     target.y = 0
-    target.direction = get_direction(e_pos_x, e_pos_y, p_pos_x, p_pos_y)
-    target.speed = UPF(100*bulletspeed)
-    target.image = img_bullet_test
-    target.mask = mask_bullet
+    target.direction = 0
+    target.speed = UPF(50*bulletspeed)
+    target.image = img_bullet_enemy
+    target.mask = mask_bullet_enemy
 
 def BattleElBullet_step(target):
     target.x += engine.lengthdir_x(target.speed, target.direction)
@@ -1389,13 +1409,13 @@ def BattleElBullet_step(target):
 
     if (not (0-16 < target.x < screen.get_canvas_width()+16)) or \
        (not (0-16 < target.y < screen.get_canvas_height()+16)): # за пределами экрана
-        del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)] # самоуничтожение
+        del EntBattleElBullet.instances[EntBattleElBullet.instances.index(target)] # самоуничтожение
 
 def BattleElBullet_step_after(target):
     if target in EntBattlePlBullet.instances:
-        if target.mask.overlap(benemy.mask, (
-        target.x - benemy.x - benemy.image.get_width() // 2, target.y - benemy.y)):  # попал в противника
-            del EntBattlePlBullet.instances[EntBattlePlBullet.instances.index(target)]  # самоуничтожение
+        if target.mask.overlap(bplayer.mask, (
+        target.x - bplayer.x - bplayer.image.get_width() // 2, target.y - bplayer.y)):  # попал в противника
+            del EntBattleElBullet.instances[EntBattleElBullet.instances.index(target)]  # самоуничтожение
 
 def BattleElBullet_draw(target, surface: pygame.Surface):
     surface.blit(target.image, (target.x - target.image.get_width()//2, target.y - target.image.get_height()//2))
@@ -1408,7 +1428,6 @@ EntBattleElBullet = engine.Entity(event_create=BattleElBullet_create,
                                   event_step=BattleElBullet_step, event_step_after=BattleElBullet_step_after,
                                   event_draw=BattleElBullet_draw,
                                   event_room_end=BattleElBullet_room_end)
-EntBattleEnBullet = engine.Entity()
 #endregion
 #region [BATTLE CREDITS]
 def BattleCredits_create(target):
@@ -1666,7 +1685,7 @@ room_field = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntFiel
                           EntFieldBoss, EntFieldPlayer])
 
 room_battle = engine.Room([EntGlobalCredits, EntGlobalCheats, EntFieldBG, EntBattlePlayer, EntBattlePlBullet,
-                           EntBattleEnemy, EntBattleEnBullet, EntBattleCredits])
+                           EntBattleEnemy, EntBattleElBullet, EntBattleCredits])
 
 room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopButton, EntShopContinue])
 
