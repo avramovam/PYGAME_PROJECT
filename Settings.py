@@ -126,10 +126,10 @@ class Main(QWidget):
             print("музыка %s" % (radioButton.country))
             # Запись в файл
             if radioButton.country == "Выкл":
-                with open('settings.txt', 'w') as f:
+                with open('sound_on.txt', 'w') as f:
                     f.write("0")
             elif radioButton.country == "Вкл":
-                with open('settings.txt', 'w') as f:
+                with open('sound_on.txt', 'w') as f:
                     f.write("1")
 
 

@@ -1679,7 +1679,7 @@ engine.rooms.change_current_room(room_mainmenu)
 #endregion
 
 #region [Settings]
-class Main(QWidget):
+class Settings(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         layout = QGridLayout()
@@ -1695,26 +1695,31 @@ class Main(QWidget):
         layout.addWidget(self.label, 0, 0)
 
         radiobutton = QRadioButton("Вкл")
-        radiobutton.setChecked(True)
+        with open('sound_on.txt', 'r') as f:
+            if f.read() == '1':
+                radiobutton.setChecked(True)
         radiobutton.country = "Вкл"
         radiobutton.toggled.connect(self.onClicked)
         radiobutton.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
         layout.addWidget(radiobutton, 0, 20)
 
         radiobutton = QRadioButton("Выкл")
+        with open('sound_on.txt', 'r') as f:
+            if f.read() == '0':
+                radiobutton.setChecked(True)
         radiobutton.country = "Выкл"
         radiobutton.toggled.connect(self.onClicked)
         radiobutton.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
         layout.addWidget(radiobutton, 0, 40)
 
-        self.b0 = QPushButton(self)
-        self.b0.move(20, 100)
-        self.b0.resize(30, 30)
-        self.b0.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
-        self.b0.setText('0')
-        self.b0.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.exit_btn = QPushButton(self)
+        self.exit_btn.move(480, 410)
+        self.exit_btn.resize(100, 30)
+        self.exit_btn.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.exit_btn.setText('Применить')
+        self.exit_btn.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
         # self.AddFB.clicked.connect(self.open_Add)
-        self.b0.clicked.connect(self.b0_clicked)
+        self.exit_btn.clicked.connect(self.exit_btn_clicked)
 
         self.b1 = QPushButton(self)
         self.b1.move(50, 100)
@@ -1799,20 +1804,22 @@ class Main(QWidget):
     def onClicked(self):
         radioButton = self.sender()
         if radioButton.isChecked():
-            print("музыка %s" % (radioButton.country))
             # Запись в файл
             if radioButton.country == "Выкл":
-                with open('settings.txt', 'w') as f:
+                with open('sound_on.txt', 'w') as f:
                     f.write("0")
             elif radioButton.country == "Вкл":
-                with open('settings.txt', 'w') as f:
+                with open('sound_on.txt', 'w') as f:
                     f.write("1")
+
+    # Выход
+    def exit_btn_clicked(self):
+        self.close()
 
 
     # функция сброса вида кнопок
 
     def clear_bs(self):
-        self.b0.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
         self.b1.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
         self.b2.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
         self.b3.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
@@ -1830,11 +1837,6 @@ class Main(QWidget):
             f.write(str(n))
 
     # блок обработки "ползунка"
-
-    def b0_clicked(self):
-        self.clear_bs()
-        self.b0.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
-        self.write_volume(0)
 
     def b1_clicked(self):
         self.clear_bs()
@@ -1891,29 +1893,24 @@ def music():
     # чтение данных из текстовых файлов
     # громкость и вкл выкл
     try:
-        with open('settings.txt', 'r') as f:
+        with open('sound_on.txt', 'r') as f:
             sound_on = int(f.read())
         with open('music_volume.txt', 'r') as f:
             music_volume = int(f.read())
     except Exception as E:
         sound_on = 1
         music_volume = 100
-        print('Возникла ошибка при чтении файлов')
-    print('Музыка - ', sound_on)
-    print('Громкость музыки -', music_volume, '%')
     if music_volume != 0:
-        print(1 * (music_volume / 100))
+        pygame.mixer.music.set_volume(music_volume / 100)
         pygame.mixer.music.load('data/mainmenu.mp3')
         if sound_on == 0:
             pygame.mixer.music.stop()
         else:
             pygame.mixer.music.play(-1)
-            pygame.mixer.music.set_volume(music_volume / 100)
-
 
 def MainMenuButton_settings():
     app = QApplication(sys.argv)
-    wnd = Main()
+    wnd = Settings()
     wnd.show()
     app.exec()
     music()
