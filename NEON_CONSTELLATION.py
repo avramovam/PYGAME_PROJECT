@@ -15,7 +15,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #22
+    Andrey Avramov                                                                                       #23
     Daria Stolyarova                                                                              25.01.2022
 ''')
 
@@ -324,6 +324,8 @@ def MainMenuInstr_step(target):
     if target.gotofield:
         target.gotofield_step += UPF(1/2) # полный переход за 2 секунды
     if target.gotofield_step >= 1:
+        score = 0
+        money = 0
         engine.rooms.change_current_room(room_field)
         FieldBoard_init_level(fboard)
 
@@ -703,6 +705,7 @@ def FieldBoard_init_level(target): # расположение штук на по
     benemy.attack_speed += 0.5
     benemy.attack_maxtimes += 2
     benemy.maxshootdelay = max(2, benemy.maxshootdelay-2)
+    benemy.maxhp += 50
 
 def FieldBoard_create(target):
     target.cellsize = 20
@@ -1129,7 +1132,7 @@ EntFieldPortal = engine.Entity(event_create=FieldPortal_create,
 #endregion
 #region [BATTLE PLAYER]
 def BattlePlayer_got_hurt(target): # попала пуля(
-    global hp, player_died
+    global hp, player_died, score, money
     if target.invulner_time <= 0:
         target.invulner_time = 1
         if target.armor > 0:
@@ -1344,7 +1347,7 @@ def BattleEnemy_create(target):
     target.y = 0
     target.posphase = 0
     target.show_step = 0
-    target.maxhp = 100
+    target.maxhp = 50
     target.hp = target.maxhp//2
     target.mask = mask_enemy0
 
@@ -1376,7 +1379,7 @@ def BattleEnemy_create(target):
     # когда target.attack_times == 0, target.attack_type сменяется и target.attack_times = target.attack_maxtimes
 
 def BattleEnemy_step(target):
-    global killedboss
+    global killedboss, score
     target.show_step = engine.clamp(target.show_step+UPF(2), 0, 1)
 
     target.x = screen.get_canvas_halfwidth() + 128 * sin(radians(target.posphase))
@@ -1387,7 +1390,9 @@ def BattleEnemy_step(target):
     for bullet in EntBattlePlBullet.instances:
         if target.mask.overlap(mask_bullet_player, (target.x + target.image.get_width()//2 - bullet.x, target.y - bullet.y)):
             target.hp -= bulletdamage
+            score += 1*cycle
             if target.hp <= 0 and not target.created_credits:
+                score += 100*cycle
                 target.created_credits = True
                 for r in range(randint(20, 50) + (40 * (enemyid == 5))): # 20..50 - обычный враг, 60..90 - босс
                     i = EntBattleCredits.instance()
