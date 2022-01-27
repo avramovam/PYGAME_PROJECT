@@ -19,7 +19,7 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #24
+    Andrey Avramov                                                                                       #25
     Daria Stolyarova                                                                              27.01.2022
 ''')
 
@@ -434,6 +434,7 @@ def MainMenuSettings_create(target):
     target.text2 = font_default.render('Режим отображения', False, 'white')
     target.text3 = font_default.render('Оконный режим', False, 'black')
     target.text4 = font_default.render('Назад', False, 'black')
+    target.text5 = font_default.render('Настройки звука', False, 'black')
 
 def MainMenuSettings_step(target):
     if target.show:
@@ -454,14 +455,14 @@ def MainMenuSettings_draw_after(target, surface: pygame.Surface):
     # ТЕКСТА
     tw1, th1 = target.text1.get_size()
     tw2, th2 = target.text2.get_size()
-    surface.blit(target.text1, ((surface.get_width() - tw1)//2 - 512 + (512*showphase), surface.get_height()//2 - 96))
-    surface.blit(target.text2, ((surface.get_width() - tw2)//2 + 512 - (512*showphase), surface.get_height()//2 + 48))
+    surface.blit(target.text1, ((width - tw1)//2 - 512 + (512*showphase), height//2 - 96))
+    surface.blit(target.text2, ((width - tw2)//2 + 512 - (512*showphase), height//2 + 48))
 
     # КНОПКА
     tw3, th3 = target.text3.get_size()
     fs = 16
-    button1_x = screen.get_canvas_halfwidth() + 512 - (512 * showphase)
-    button1_y = screen.get_canvas_halfheight() + 96
+    button1_x = width//2 + 512 - (512 * showphase)
+    button1_y = height//2 + 96
     rect_coords = (button1_x - ((tw3 + fs) // 2), button1_y - ((th3 + fs) // 2), tw3 + fs, th3 + fs)
     text_coords = (button1_x - (tw3 // 2), button1_y - (th3 // 2))
     rounding = 4  # величина скругления задника
@@ -470,13 +471,22 @@ def MainMenuSettings_draw_after(target, surface: pygame.Surface):
     surface.blit(target.text3, text_coords)
 
     tw4, th4 = target.text4.get_size()
-    button2_x = screen.get_canvas_halfwidth()
-    button2_y = screen.get_canvas_height() - 32 + 128 - (128 * showphase)
+    button2_x = width//2
+    button2_y = height - 32 + 128 - (128 * showphase)
     rect_coords = (button2_x - ((tw4 + fs) // 2), button2_y - ((th4 + fs) // 2), tw4 + fs, th4 + fs)
     text_coords = (button2_x - (tw4 // 2), button2_y - (th4 // 2))
     pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
     pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
     surface.blit(target.text4, text_coords)
+
+    tw5, th5 = target.text5.get_size()
+    button3_x = width//2 + 512 - (512 * showphase)
+    button3_y = height//2
+    rect_coords = (button3_x - ((tw5 + fs) // 2), button3_y - ((th5 + fs) // 2), tw5 + fs, th5 + fs)
+    text_coords = (button3_x - (tw5 // 2), button3_y - (th5 // 2))
+    pygame.draw.rect(surface, 'white', rect_coords, 0, rounding)  # задник
+    pygame.draw.rect(surface, 'gray', rect_coords, 3, rounding)  # обводка задника
+    surface.blit(target.text5, text_coords)
 
 def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
     global show_mode
@@ -498,6 +508,12 @@ def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
     xrange2 = button2_x - xd <= mousepos[0] <= button2_x + xd
     yrange2 = button2_y - yd <= mousepos[1] <= button2_y + yd
 
+    button3_x = screen.get_canvas_halfwidth() + 512 - (512 * showphase)
+    button3_y = screen.get_canvas_halfheight()
+
+    xrange3 = button3_x - xd <= mousepos[0] <= button3_x + xd
+    yrange3 = button3_y - yd <= mousepos[1] <= button3_y + yd
+
     if (xrange1 and yrange1):
         if show_mode == 0: # оконный -> полный экран
             target.text3 = font_default.render('На весь экран', False, 'black')
@@ -510,23 +526,11 @@ def MainMenuSettings_mouse_pressed(target, mousepos, buttonid):
             screen.update_screen((16 * scale * pixelscale, 9 * scale * pixelscale), fullscreen_mode=0,
                                  resizable_mode=True)
 
-        # if show_mode == 0: # оконный -> оконный на весь экран
-        #     target.text3 = font_default.render('Оконный на весь экран', False, 'black')
-        #     show_mode = 1
-        #     screen.update_screen(fullscreen_mode=2, resizable_mode=False)
-        #
-        # elif show_mode == 1: # оконный на весь экран -> полный экран
-        #     target.text3 = font_default.render('На весь экран', False, 'black')
-        #     show_mode = 2
-        #     screen.update_screen(fullscreen_mode=1, resizable_mode=False)
-        #
-        # elif show_mode == 2: # полный экран -> оконный
-        #     target.text3 = font_default.render('Оконный режим', False, 'black')
-        #     show_mode = 0
-        #     screen.update_screen((16*scale*pixelscale, 9*scale*pixelscale), fullscreen_mode=0, resizable_mode=True)
-
     if (xrange2 and yrange2):
         target.show = 0
+
+    if (xrange3 and yrange3):
+        MainMenuButton_settings()
 
 EntMainMenuSettings = engine.Entity(event_create=MainMenuSettings_create,
                                     event_step=MainMenuSettings_step,
