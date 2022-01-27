@@ -3,6 +3,10 @@ import engine
 from math import floor, ceil, sin, radians
 from typing import Union, Tuple
 from random import randint
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5 import uic, QtGui
+from pygame.math import Vector2 as vec
 
 #region [ИНИЦИАЛИЗАЦИЯ ПРОГРАММЫ]
 print(''':P
@@ -1811,6 +1815,247 @@ room_shop = engine.Room([EntGlobalCredits, EntGlobalCheats, EntShopBG, EntShopBu
 
 engine.rooms.change_current_room(room_mainmenu)
 #engine.rooms.change_current_room(room_shop)
+#endregion
+
+#region [Settings]
+class Settings(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        layout = QGridLayout()
+        self.setLayout(layout)
+        self.setWindowTitle('Настройки')
+        self.setFixedSize(600, 450)
+        pal = self.palette()
+        pal.setBrush(QtGui.QPalette.Normal, QtGui.QPalette.Window,
+                     QtGui.QBrush(QtGui.QPixmap("data/bg.set.jpg")))
+        self.setPalette(pal)
+        self.label = QLabel('Музыка')
+        self.label.setStyleSheet("QLabel { background-color: rgba(180, 180, 180, 160)}")
+        layout.addWidget(self.label, 0, 0)
+
+        radiobutton = QRadioButton("Вкл")
+        with open('sound_on.txt', 'r') as f:
+            if f.read() == '1':
+                radiobutton.setChecked(True)
+        radiobutton.country = "Вкл"
+        radiobutton.toggled.connect(self.onClicked)
+        radiobutton.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        layout.addWidget(radiobutton, 0, 20)
+
+        radiobutton = QRadioButton("Выкл")
+        with open('sound_on.txt', 'r') as f:
+            if f.read() == '0':
+                radiobutton.setChecked(True)
+        radiobutton.country = "Выкл"
+        radiobutton.toggled.connect(self.onClicked)
+        radiobutton.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        layout.addWidget(radiobutton, 0, 40)
+
+        self.exit_btn = QPushButton(self)
+        self.exit_btn.move(480, 410)
+        self.exit_btn.resize(100, 30)
+        self.exit_btn.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.exit_btn.setText('Применить')
+        self.exit_btn.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        # self.AddFB.clicked.connect(self.open_Add)
+        self.exit_btn.clicked.connect(self.exit_btn_clicked)
+
+        self.b1 = QPushButton(self)
+        self.b1.move(50, 100)
+        self.b1.resize(30, 30)
+        self.b1.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b1.setText('10')
+        self.b1.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b1.clicked.connect(self.b1_clicked)
+
+        self.b2 = QPushButton(self)
+        self.b2.move(80, 100)
+        self.b2.resize(30, 30)
+        self.b2.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b2.setText('20')
+        self.b2.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b2.clicked.connect(self.b2_clicked)
+
+        self.b3 = QPushButton(self)
+        self.b3.move(110, 100)
+        self.b3.resize(30, 30)
+        self.b3.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b3.setText('30')
+        self.b3.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b3.clicked.connect(self.b3_clicked)
+
+        self.b4 = QPushButton(self)
+        self.b4.move(140, 100)
+        self.b4.resize(30, 30)
+        self.b4.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b4.setText('40')
+        self.b4.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b4.clicked.connect(self.b4_clicked)
+
+        self.b5 = QPushButton(self)
+        self.b5.move(170, 100)
+        self.b5.resize(30, 30)
+        self.b5.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b5.setText('50')
+        self.b5.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b5.clicked.connect(self.b5_clicked)
+
+        self.b6 = QPushButton(self)
+        self.b6.move(200, 100)
+        self.b6.resize(30, 30)
+        self.b6.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b6.setText('60')
+        self.b6.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b6.clicked.connect(self.b6_clicked)
+
+        self.b7 = QPushButton(self)
+        self.b7.move(230, 100)
+        self.b7.resize(30, 30)
+        self.b7.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b7.setText('70')
+        self.b7.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b7.clicked.connect(self.b7_clicked)
+
+        self.b8 = QPushButton(self)
+        self.b8.move(260, 100)
+        self.b8.resize(30, 30)
+        self.b8.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b8.setText('80')
+        self.b8.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b8.clicked.connect(self.b8_clicked)
+
+        self.b9 = QPushButton(self)
+        self.b9.move(290, 100)
+        self.b9.resize(30, 30)
+        self.b9.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b9.setText('90')
+        self.b9.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b9.clicked.connect(self.b9_clicked)
+
+        self.b10 = QPushButton(self)
+        self.b10.move(320, 100)
+        self.b10.resize(30, 30)
+        self.b10.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.b10.setText('100')
+        self.b10.setFont(QtGui.QFont('', 12, QtGui.QFont.Bold))
+        self.b10.clicked.connect(self.b10_clicked)
+
+    def onClicked(self):
+        radioButton = self.sender()
+        if radioButton.isChecked():
+            # Запись в файл
+            if radioButton.country == "Выкл":
+                with open('sound_on.txt', 'w') as f:
+                    f.write("0")
+            elif radioButton.country == "Вкл":
+                with open('sound_on.txt', 'w') as f:
+                    f.write("1")
+
+    # Выход
+    def exit_btn_clicked(self):
+        self.close()
+
+
+    # функция сброса вида кнопок
+
+    def clear_bs(self):
+        self.b1.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b2.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b3.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b4.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b5.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b6.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b7.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b8.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b9.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+        self.b10.setStyleSheet("background-color: rgba(180, 180, 180, 160)")
+
+    # Функция записи громкости
+    def write_volume(self, n):
+        with open('music_volume.txt', 'w') as f:
+            f.write(str(n))
+
+    # блок обработки "ползунка"
+
+    def b1_clicked(self):
+        self.clear_bs()
+        self.b1.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(10)
+
+    def b2_clicked(self):
+        self.clear_bs()
+        self.b2.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(20)
+
+    def b3_clicked(self):
+        self.clear_bs()
+        self.b3.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(30)
+
+    def b4_clicked(self):
+        self.clear_bs()
+        self.b4.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(40)
+
+    def b5_clicked(self):
+        self.clear_bs()
+        self.b5.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(50)
+
+    def b6_clicked(self):
+        self.clear_bs()
+        self.b6.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(60)
+
+    def b7_clicked(self):
+        self.clear_bs()
+        self.b7.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(70)
+
+    def b8_clicked(self):
+        self.clear_bs()
+        self.b8.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(80)
+
+    def b9_clicked(self):
+        self.clear_bs()
+        self.b9.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(90)
+
+    def b10_clicked(self):
+        self.clear_bs()
+        self.b10.setStyleSheet("background-color: rgba(180, 180, 180, 255)")
+        self.write_volume(100)
+
+# Функция, отвечающая за музыку и ее громкость
+def music():
+    # чтение данных из текстовых файлов
+    # громкость и вкл выкл
+    try:
+        with open('sound_on.txt', 'r') as f:
+            sound_on = int(f.read())
+        with open('music_volume.txt', 'r') as f:
+            music_volume = int(f.read())
+    except Exception as E:
+        sound_on = 1
+        music_volume = 100
+    if music_volume != 0:
+        pygame.mixer.music.set_volume(music_volume / 100)
+        pygame.mixer.music.load('data/mainmenu.mp3')
+        if sound_on == 0:
+            pygame.mixer.music.stop()
+        else:
+            pygame.mixer.music.play(-1)
+
+def MainMenuButton_settings():
+    app = QApplication(sys.argv)
+    wnd = Settings()
+    wnd.show()
+    app.exec()
+    music()
+    # sys.exit(app.exec())
+
+
 #endregion
 
 #region [СОЗДАНИЕ INSTANCE]
