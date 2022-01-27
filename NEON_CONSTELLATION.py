@@ -15,8 +15,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #23
-    Daria Stolyarova                                                                              25.01.2022
+    Andrey Avramov                                                                                       #24
+    Daria Stolyarova                                                                              27.01.2022
 ''')
 
 pygame.init()
@@ -316,6 +316,7 @@ def MainMenuInstr_create(target):
             target.instructions[i].append(target.font.render(target.i_strings[i][j], True, target.text_color))
 
 def MainMenuInstr_step(target):
+    global score, money
     if target.show:
         target.show_step = engine.clamp(target.show_step+UPF(1), 0, 1)
     else:
@@ -1144,6 +1145,8 @@ def BattlePlayer_got_hurt(target): # попала пуля(
         else:
             sfx_death.play()
             player_died = True
+            while len(EntFieldEnemy.instances) > 0:
+                del EntFieldEnemy.instances[0]
             engine.rooms.change_current_room(room_mainmenu)
     return target.invulner_time <= 0
 
