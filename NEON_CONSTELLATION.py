@@ -19,8 +19,8 @@ print(''':P
                                             (Neon Constellation)
 by:                                                                                      version:
     Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #25
-    Daria Stolyarova                                                                              27.01.2022
+    Andrey Avramov                                                                                       #26
+    Daria Stolyarova                                                                              28.01.2022
 ''')
 
 pygame.init()
@@ -113,7 +113,7 @@ def GlobalCheats_draw_after(target, surface: pygame.Surface):
                   centered=False)
 
 def GlobalCheats_kb_pressed(target, buttonid):
-    global cheats_nodetect, cheats_enabled, money
+    global cheats_nodetect, cheats_enabled, money, hp
     target.keys[buttonid] = True
     if target.keys[pygame.K_LALT] or target.keys[pygame.K_RALT]:
         if buttonid == pygame.K_RETURN: # вкл/выкл читы
@@ -1359,7 +1359,7 @@ def BattleEnemy_create(target):
     target.posphase = 0
     target.show_step = 0
     target.maxhp = 50
-    target.hp = target.maxhp//2
+    target.hp = target.maxhp
     target.mask = mask_enemy0
 
     target.font = font_small
@@ -1509,7 +1509,7 @@ def BattleEnemy_room_start(target):
     instance_render_text(target)
 
     target.maxhp = 100
-    target.hp = target.maxhp // 2
+    target.hp = target.maxhp
     target.gotofield_step = 0
     target.posphase = 0
     target.show_step = 0
@@ -1525,7 +1525,7 @@ def BattleElBullet_create(target):
     target.x = 0
     target.y = 0
     target.direction = 0
-    target.speed = UPF(50*bulletspeed)
+    target.speed = UPF(75 + 30*cycle)
     target.image = img_bullet_enemy
     target.mask = mask_bullet_enemy
 
