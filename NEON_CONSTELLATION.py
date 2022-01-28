@@ -320,7 +320,7 @@ def MainMenuInstr_create(target):
             target.instructions[i].append(target.font.render(target.i_strings[i][j], True, target.text_color))
 
 def MainMenuInstr_step(target):
-    global score, money, level, maxhp, hp, maxarmor, abilityid, bulletspeed, bulletdamage, shootspeed
+    global score, money, level, maxhp, hp, maxarmor, abilityid, bulletspeed, bulletdamage, shootspeed, cycle
     if target.show:
         target.show_step = engine.clamp(target.show_step+UPF(1), 0, 1)
     else:
@@ -329,6 +329,7 @@ def MainMenuInstr_step(target):
     if target.gotofield:
         target.gotofield_step += UPF(1/2) # полный переход за 2 секунды
     if target.gotofield_step >= 1:
+        cycle = 1
         score = 0
         money = 0
         level = 1
