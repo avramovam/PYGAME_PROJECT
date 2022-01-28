@@ -18,8 +18,8 @@ print(''':P
 \\_| \\_/\\____/ \\___/\\_| \\_/  \\____/\\___/\\_| \\_/\\____/  \\_/ \\____/\\_____/\\_____/\\_| |_/\\_/  \\___/ \\___/\\_| \\_/
                                             (Neon Constellation)
 by:                                                                                      version:
-    Alexey Kozhanov                                                                               DVLP BUILD
-    Andrey Avramov                                                                                       #26
+    Alexey Kozhanov                                                                                  RELEASE
+    Andrey Avramov                                                                                      V1.0
     Daria Stolyarova                                                                              28.01.2022
 ''')
 
@@ -320,7 +320,7 @@ def MainMenuInstr_create(target):
             target.instructions[i].append(target.font.render(target.i_strings[i][j], True, target.text_color))
 
 def MainMenuInstr_step(target):
-    global score, money
+    global score, money, level, maxhp, hp, maxarmor, abilityid, bulletspeed, bulletdamage, shootspeed
     if target.show:
         target.show_step = engine.clamp(target.show_step+UPF(1), 0, 1)
     else:
@@ -331,6 +331,14 @@ def MainMenuInstr_step(target):
     if target.gotofield_step >= 1:
         score = 0
         money = 0
+        level = 1
+        maxhp = 8
+        hp = 6
+        maxarmor = 0
+        abilityid = 0
+        bulletdamage = 1
+        shootspeed = 5
+        bulletspeed = 2
         engine.rooms.change_current_room(room_field)
         FieldBoard_init_level(fboard)
 
